@@ -81,6 +81,9 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   const drawingRef = useRef(false)
   const draftRef = useRef<PdfMarkPoint[]>([])
   const strokesRef = useRef<PdfMarkStroke[]>([])
+  const scrollPosRef = useRef({ top: 0, ratio: 0 })
+  const skipScrollSaveRef = useRef(false)
+  const lastPaginaRef = useRef<number | null>(null)
 
   const [paginas, setPaginas] = useState(0)
   const [pagina, setPagina] = useState(1)
@@ -164,12 +167,19 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         setPaginas(total)
 
         let start = 1
+        let scrollTop = 0
+        let scrollRatio = 0
         if (proyectoId && archivoId) {
           const saved = loadMesaPdfPos(proyectoId, archivoId)
           if (saved?.pagina && saved.pagina >= 1) {
             start = Math.min(saved.pagina, total)
           }
+          if (saved && (!saved.pagina || saved.pagina === start)) {
+            scrollTop = saved.scrollTop || 0
+            scrollRatio = saved.scrollRatio || 0
+          }
         }
+        scrollPosRef.current = { top: scrollTop, ratio: scrollRatio }
         setPagina(start)
       } catch (err) {
         if (!cancelled) {
@@ -257,7 +267,29 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         await task.promise
         if (cancelled) return
         redibujarMarcas(strokesRef.current)
-        if (wrapRef.current) wrapRef.current.scrollTop = 0
+
+        const wrap = wrapRef.current
+        if (wrap) {
+          skipScrollSaveRef.current = true
+          const pageChanged =
+            lastPaginaRef.current !== null && lastPaginaRef.current !== pagina
+          if (pageChanged) {
+            wrap.scrollTop = 0
+            scrollPosRef.current = { top: 0, ratio: 0 }
+          } else {
+            const max = Math.max(0, wrap.scrollHeight - wrap.clientHeight)
+            const { top, ratio } = scrollPosRef.current
+            if (ratio > 0 && max > 0) {
+              wrap.scrollTop = ratio * max
+            } else {
+              wrap.scrollTop = Math.min(top, max)
+            }
+          }
+          lastPaginaRef.current = pagina
+          requestAnimationFrame(() => {
+            skipScrollSaveRef.current = false
+          })
+        }
       } catch (err) {
         if (!cancelled && !esCancelado(err)) {
           setError('No se pudo mostrar esta página.')
@@ -283,10 +315,38 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
     if (!proyectoId || !archivoId || paginas === 0 || loading) return
     saveMesaPdfPos(proyectoId, archivoId, {
       pagina,
-      scrollTop: 0,
-      scrollRatio: 0,
+      scrollTop: scrollPosRef.current.top,
+      scrollRatio: scrollPosRef.current.ratio,
     })
   }, [pagina, paginas, proyectoId, archivoId, loading])
+
+  useEffect(() => {
+    const wrap = wrapRef.current
+    if (!wrap || !proyectoId || !archivoId) return
+
+    let timer: number | undefined
+    function onScroll() {
+      if (skipScrollSaveRef.current) return
+      const max = Math.max(0, wrap!.scrollHeight - wrap!.clientHeight)
+      const top = wrap!.scrollTop
+      const ratio = max > 0 ? top / max : 0
+      scrollPosRef.current = { top, ratio }
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        saveMesaPdfPos(proyectoId!, archivoId!, {
+          pagina,
+          scrollTop: top,
+          scrollRatio: ratio,
+        })
+      }, 120)
+    }
+
+    wrap.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.clearTimeout(timer)
+      wrap.removeEventListener('scroll', onScroll)
+    }
+  }, [proyectoId, archivoId, pagina, loading])
 
   function persist(next: PdfMarkStroke[]) {
     setStrokes(next)
@@ -392,6 +452,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
 
   function ir(delta: number) {
     setError('')
+    scrollPosRef.current = { top: 0, ratio: 0 }
     setPagina((p) => Math.min(paginas, Math.max(1, p + delta)))
   }
 
