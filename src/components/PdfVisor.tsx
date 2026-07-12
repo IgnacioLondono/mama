@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'rea
 import { loadMesaPdfPos, saveMesaPdfPos } from '../lib/mesaSession'
 import {
   COLORES_RESALTE,
+  GROSORES_PINCEL,
   loadPdfMarksPage,
   savePdfMarksPage,
   type PdfMarkPoint,
@@ -89,9 +90,11 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   const [pincel, setPincel] = useState(false)
   const [borrador, setBorrador] = useState(false)
   const [colorIdx, setColorIdx] = useState(0)
+  const [grosorIdx, setGrosorIdx] = useState(1)
   const [strokes, setStrokes] = useState<PdfMarkStroke[]>([])
 
   const puedeMarcar = Boolean(proyectoId && archivoId)
+  const grosorActual = GROSORES_PINCEL[grosorIdx].grosor
 
   const redibujarMarcas = useCallback((list: PdfMarkStroke[]) => {
     const mark = markRef.current
@@ -333,7 +336,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         id: 'draft',
         tipo: 'linea',
         color: COLORES_RESALTE[colorIdx].color,
-        grosor: 0.028,
+        grosor: grosorActual,
         points: [p, p],
       },
     ])
@@ -353,7 +356,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         id: 'draft',
         tipo: 'linea',
         color: COLORES_RESALTE[colorIdx].color,
-        grosor: 0.028,
+        grosor: grosorActual,
         points: draftRef.current,
       },
     ])
@@ -380,7 +383,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
       id: uid(),
       tipo: 'linea',
       color: COLORES_RESALTE[colorIdx].color,
-      grosor: 0.028,
+      grosor: grosorActual,
       points: pts,
     }
     persist([...strokesRef.current, stroke])
@@ -486,6 +489,24 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
                   setBorrador(false)
                 }}
               />
+            ))}
+          </div>
+          <div className={styles.sizes} role="group" aria-label="Tamaño">
+            {GROSORES_PINCEL.map((g, i) => (
+              <button
+                key={g.id}
+                type="button"
+                className={`${styles.toolBtn} ${grosorIdx === i ? styles.toolOn : ''}`}
+                title={`Pincel ${g.label}`}
+                aria-pressed={grosorIdx === i}
+                onClick={() => {
+                  setGrosorIdx(i)
+                  setPincel(true)
+                  setBorrador(false)
+                }}
+              >
+                {g.label}
+              </button>
             ))}
           </div>
           <button

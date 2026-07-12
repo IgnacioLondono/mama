@@ -11,16 +11,30 @@ async function request<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
-    ...init,
-    headers: {
-      ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-      ...authHeaders(),
-      ...init?.headers,
-    },
-  })
+  let res: Response
+  try {
+    res = await fetch(`${API}${path}`, {
+      ...init,
+      headers: {
+        ...(init?.body instanceof FormData
+          ? {}
+          : { 'Content-Type': 'application/json' }),
+        ...authHeaders(),
+        ...init?.headers,
+      },
+    })
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') throw err
+    if (err instanceof Error && err.name === 'AbortError') throw err
+    throw err
+  }
   if (res.status === 204) return undefined as T
   if (!res.ok) {
+    if (res.status === 499) {
+      const e = new Error('Detenido.')
+      e.name = 'AbortError'
+      throw e
+    }
     let message = 'Algo falló.'
     try {
       const data = (await res.json()) as { error?: string }
@@ -213,19 +227,26 @@ export const api = {
 
   iaEstado: () =>
     request<{ configurada: boolean; proveedor: string }>('/ia/estado'),
-  iaAyuda: (body: {
-    pregunta?: string
-    proyectoId?: string
-    patronId?: string
-    archivoId?: string
-    usarPdf?: boolean
-  }) =>
+  iaAyuda: (
+    body: {
+      pregunta?: string
+      proyectoId?: string
+      patronId?: string
+      archivoId?: string
+      usarPdf?: boolean
+    },
+    init?: { signal?: AbortSignal },
+  ) =>
     request<{
       respuesta: string
       aviso?: string
       proveedor: string
       archivosLeidos?: string[]
-    }>('/ia/ayuda', { method: 'POST', body: JSON.stringify(body) }),
+    }>('/ia/ayuda', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      signal: init?.signal,
+    }),
   iaPrecargar: (body: {
     proyectoId?: string
     patronId?: string

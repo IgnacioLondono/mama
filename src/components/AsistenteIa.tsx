@@ -37,7 +37,7 @@ function holaMsg(): IaChatMsg {
     id: `hola-${Date.now()}`,
     rol: 'bot',
     texto:
-      'Hola. Puedo charlar normal o mirar el PDF si lo activás. ¿En qué te ayudo?',
+      'Hola. Puedo ayudarte con tips o, si activás «Con PDF», leer el patrón con precisión. ¿En qué te ayudo?',
   }
 }
 
@@ -59,6 +59,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const skipFirstSave = useRef(true)
   const stickBottom = useRef(true)
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     setMsgs(loadIaChat(scope))
@@ -120,19 +121,27 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
     const q = preguntaTexto.trim()
     if (!q || loading) return
 
+    abortRef.current?.abort()
+    const ac = new AbortController()
+    abortRef.current = ac
+
     setLoading(true)
     stickBottom.current = true
     setShowJump(false)
     setMsgs(historial)
 
     try {
-      const res = await api.iaAyuda({
-        pregunta: q,
-        proyectoId,
-        patronId,
-        archivoId: archivoId ?? undefined,
-        usarPdf,
-      })
+      const res = await api.iaAyuda(
+        {
+          pregunta: q,
+          proyectoId,
+          patronId,
+          archivoId: archivoId ?? undefined,
+          usarPdf,
+        },
+        { signal: ac.signal },
+      )
+      if (ac.signal.aborted) return
       setMsgs(() => {
         const next = [...historial]
         if (res.aviso) {
@@ -142,6 +151,20 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
         return next
       })
     } catch (err) {
+      if (
+        (err instanceof Error && err.name === 'AbortError') ||
+        ac.signal.aborted
+      ) {
+        setMsgs((prev) => [
+          ...historial,
+          {
+            id: uid(),
+            rol: 'aviso',
+            texto: 'Respuesta detenida.',
+          },
+        ])
+        return
+      }
       setMsgs(() => [
         ...historial,
         {
@@ -152,9 +175,16 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
         },
       ])
     } finally {
+      if (abortRef.current === ac) abortRef.current = null
       setLoading(false)
       inputRef.current?.focus()
     }
+  }
+
+  function detener() {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setLoading(false)
   }
 
   async function preguntar(texto?: string) {
@@ -219,6 +249,10 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
+    if (loading) {
+      detener()
+      return
+    }
     void preguntar()
   }
 
@@ -387,10 +421,19 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
 
           {loading ? (
             <div className={styles.rowBot}>
-              <div className={`${styles.bubbleBot} ${styles.typing}`}>
-                <span />
-                <span />
-                <span />
+              <div className={styles.typingRow}>
+                <div className={`${styles.bubbleBot} ${styles.typing}`}>
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <button
+                  type="button"
+                  className={styles.stopBtn}
+                  onClick={detener}
+                >
+                  Detener
+                </button>
               </div>
             </div>
           ) : null}
@@ -442,12 +485,13 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
           }}
         />
         <button
-          type="submit"
-          className={styles.send}
-          disabled={loading || !!editId || !pregunta.trim()}
-          aria-label="Enviar"
+          type={loading ? 'button' : 'submit'}
+          className={loading ? styles.stopSend : styles.send}
+          disabled={!loading && (!pregunta.trim() || !!editId)}
+          aria-label={loading ? 'Detener' : 'Enviar'}
+          onClick={loading ? detener : undefined}
         >
-          Enviar
+          {loading ? 'Detener' : 'Enviar'}
         </button>
       </form>
     </div>

@@ -60,3 +60,11 @@ export const COLORES_RESALTE = [
   { id: 'verde', color: 'rgba(120, 220, 140, 0.4)', label: 'Verde' },
   { id: 'celeste', color: 'rgba(120, 190, 255, 0.4)', label: 'Celeste' },
 ] as const
+
+/** Grosor relativo al alto de la página. */
+export const GROSORES_PINCEL = [
+  { id: 'fino', grosor: 0.014, label: 'Fino' },
+  { id: 'medio', grosor: 0.028, label: 'Medio' },
+  { id: 'grueso', grosor: 0.042, label: 'Grueso' },
+  { id: 'xl', grosor: 0.06, label: 'XL' },
+] as const

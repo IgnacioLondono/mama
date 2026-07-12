@@ -92,6 +92,11 @@ async function main() {
   })
 
   app.post('/api/ia/ayuda', async (req, res) => {
+    const ac = new AbortController()
+    const onClose = () => {
+      if (!res.writableEnded) ac.abort()
+    }
+    req.on('close', onClose)
     try {
       const result = await pedirAyudaIa({
         pregunta: req.body?.pregunta as string | undefined,
@@ -99,11 +104,21 @@ async function main() {
         patronId: req.body?.patronId as string | undefined,
         proyectoId: req.body?.proyectoId as string | undefined,
         usarPdf: Boolean(req.body?.usarPdf),
+        signal: ac.signal,
       })
       res.json(result)
     } catch (err) {
+      if (
+        (err instanceof Error && err.name === 'AbortError') ||
+        ac.signal.aborted
+      ) {
+        if (!res.headersSent) res.status(499).json({ error: 'Detenido.' })
+        return
+      }
       const message = err instanceof Error ? err.message : 'Falló la IA.'
       res.status(400).json({ error: message })
+    } finally {
+      req.off('close', onClose)
     }
   })
 

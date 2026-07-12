@@ -85,6 +85,13 @@
   margin-left: 0.15rem;
 }
 
+.sizes {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-left: 0.1rem;
+}
+
 .swatch {
   width: 1.15rem;
   height: 1.15rem;

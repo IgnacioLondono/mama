@@ -8,12 +8,14 @@ import {
   uploadsDir,
 } from './db.ts'
 
-const SYSTEM = `Ayudante de crochet/amigurumi y conversación cercana. Español, clara y breve (máx. 8 oraciones o lista corta).
-Si te pasan texto de PDF/patrón, úsalo. Si no, responde normal (tips generales, charla, dudas) sin inventar vueltas de un PDF.
-Explica abreviaciones (pb, aum, dis, an…). No inventes vueltas exactas de un patrón concreto si no las tienes.`
+const SYSTEM = `Asistente profesional de crochet y amigurumi. Español claro, tono experto y cercano.
+Reglas: sé precisa y breve (máx. 6–8 oraciones o lista corta). Priorizá lo útil.
+Si hay texto de PDF/patrón, cítalo o parafraséalo con fidelidad; no inventes vueltas, cantidades ni pasos que no estén.
+Si el PDF no alcanza, dilo y ofrecé tips generales. Explicá abreviaciones (pb, aum, dis, an…) solo si aportan.`
 
-const SYSTEM_CHAT = `Ayudante de crochet amigable. Español, frases cortas.
-Charla normal: tips generales, ánimo, dudas de tejido. No digas que leíste un PDF. No inventes vueltas de un patrón concreto.`
+const SYSTEM_CHAT = `Asistente profesional de crochet. Español claro y breve (máx. 5 oraciones).
+Respondé dudas generales, tips y abreviaciones. Sin inventar vueltas de un patrón concreto. No digas que leíste un PDF.`
+
 
 type CacheEntry = {
   key: string
@@ -148,12 +150,35 @@ async function leerArchivoTexto(archivoId: string): Promise<{
 }
 
 /** Elige trozos del PDF relevantes a la pregunta (más rápido y útil que mandar todo). */
+function quiereLecturaAmplia(pregunta: string): boolean {
+  return /\b(todo|toda|completo|completa|entero|entera|resumen|resum[ií]|lee|leer|lectura|explica(me)? el patr[oó]n|recorre|detalle)\b/i.test(
+    pregunta,
+  )
+}
+
 function seleccionarFragmentos(
   texto: string,
   pregunta: string,
   maxChars: number,
 ): string {
   if (texto.length <= maxChars) return texto
+
+  const amplia = quiereLecturaAmplia(pregunta)
+  // Lectura amplia: más del inicio + tramos equiespaciados (cobertura del PDF)
+  if (amplia) {
+    const head = Math.floor(maxChars * 0.45)
+    const resto = maxChars - head - 40
+    const chunks: string[] = [texto.slice(0, head)]
+    const step = Math.max(800, Math.floor(texto.length / 5))
+    let used = head
+    for (let i = head; i < texto.length && used < maxChars; i += step) {
+      const take = Math.min(Math.floor(resto / 4), maxChars - used)
+      if (take < 120) break
+      chunks.push(texto.slice(i, i + take))
+      used += take + 10
+    }
+    return `${chunks.join('\n\n…\n\n')}\n…`
+  }
 
   const stop = new Set([
     'para',
@@ -199,11 +224,14 @@ function seleccionarFragmentos(
 
   const scored = bloques.map((b, i) => {
     const bl = b.toLowerCase()
-    let score = i < 3 ? 1 : 0 // intro / abreviaciones al inicio
+    let score = i < 4 ? 1.5 : 0
     for (const k of keys) {
       if (bl.includes(k)) score += 3
     }
-    if (/\bv\s*\d+\b|\bvuelta\s*\d+/i.test(pregunta) && /\bv\s*\d+\b|\bvuelta/i.test(b)) {
+    if (
+      /\bv\s*\d+\b|\bvuelta\s*\d+/i.test(pregunta) &&
+      /\bv\s*\d+\b|\bvuelta/i.test(b)
+    ) {
       score += 4
     }
     return { b, score, i }
@@ -213,12 +241,12 @@ function seleccionarFragmentos(
 
   const elegidos: { b: string; i: number }[] = []
   let usado = 0
-  const cabecera = texto.slice(0, Math.min(700, Math.floor(maxChars * 0.25)))
+  const cabecera = texto.slice(0, Math.min(1200, Math.floor(maxChars * 0.3)))
   usado += cabecera.length
   elegidos.push({ b: cabecera, i: -1 })
 
   for (const s of scored) {
-    if (s.score <= 0 && elegidos.length > 2) continue
+    if (s.score <= 0 && elegidos.length > 3) continue
     if (usado + s.b.length > maxChars) continue
     if (elegidos.some((e) => e.i === s.i || e.b === s.b)) continue
     elegidos.push({ b: s.b, i: s.i })
@@ -314,15 +342,21 @@ async function cargarContexto(opts: {
   }
 
   textoPdf = partesTexto.join('\n\n')
-  if (textoPdf.length > 20000) {
-    textoPdf = `${textoPdf.slice(0, 20000)}\n…(recortado)`
+  if (textoPdf.length > 48000) {
+    textoPdf = `${textoPdf.slice(0, 48000)}\n…(recortado)`
   }
 
   if (opts.pregunta && textoPdf) {
+    const amplia = quiereLecturaAmplia(opts.pregunta)
     const max =
       iaProveedor() === 'ollama'
-        ? Number(process.env.OLLAMA_PDF_CHARS || 4500)
-        : 10000
+        ? Number(
+            process.env.OLLAMA_PDF_CHARS ||
+              (amplia ? 9000 : 6500),
+          )
+        : amplia
+          ? 16000
+          : 12000
     textoPdf = seleccionarFragmentos(textoPdf, opts.pregunta, max)
   }
 
@@ -337,6 +371,7 @@ function acortar(texto: string, max: number): string {
 async function llamarOpenAI(
   userContent: string,
   system = SYSTEM,
+  opts?: { maxTokens?: number; signal?: AbortSignal },
 ): Promise<string> {
   const key = process.env.OPENAI_API_KEY!.trim()
   const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini'
@@ -350,10 +385,11 @@ async function llamarOpenAI(
       Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
     },
+    signal: opts?.signal,
     body: JSON.stringify({
       model,
-      temperature: 0.3,
-      max_tokens: 450,
+      temperature: 0.25,
+      max_tokens: opts?.maxTokens ?? 380,
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: userContent },
@@ -375,15 +411,18 @@ async function llamarOpenAI(
 async function llamarOllama(
   userContent: string,
   system = SYSTEM,
+  opts?: { numPredict?: number; numCtx?: number; signal?: AbortSignal },
 ): Promise<string> {
   const base = process.env.OLLAMA_BASE_URL!.trim().replace(/\/$/, '')
   const model = process.env.OLLAMA_MODEL?.trim() || 'llama3.2'
-  const numPredict = Number(process.env.OLLAMA_NUM_PREDICT || 220)
-  const numCtx = Number(process.env.OLLAMA_NUM_CTX || 3072)
+  const numPredict =
+    opts?.numPredict ?? Number(process.env.OLLAMA_NUM_PREDICT || 200)
+  const numCtx = opts?.numCtx ?? Number(process.env.OLLAMA_NUM_CTX || 3072)
 
   const res = await fetch(`${base}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal: opts?.signal,
     body: JSON.stringify({
       model,
       stream: false,
@@ -391,8 +430,8 @@ async function llamarOllama(
       options: {
         num_ctx: numCtx,
         num_predict: numPredict,
-        temperature: 0.35,
-        top_p: 0.9,
+        temperature: 0.28,
+        top_p: 0.85,
         num_thread: Number(process.env.OLLAMA_NUM_THREAD || 0) || undefined,
       },
       messages: [
@@ -451,6 +490,7 @@ export async function pedirAyudaIa(opts: {
   proyectoId?: string
   /** Si es false, charla normal sin leer PDF (más rápido). */
   usarPdf?: boolean
+  signal?: AbortSignal
 }): Promise<{
   respuesta: string
   aviso?: string
@@ -463,11 +503,17 @@ export async function pedirAyudaIa(opts: {
     )
   }
 
+  if (opts.signal?.aborted) {
+    const e = new Error('Abortado')
+    e.name = 'AbortError'
+    throw e
+  }
+
   const usarPdf = opts.usarPdf === true
   const pregunta =
     opts.pregunta?.trim() ||
     (usarPdf
-      ? 'Lee el archivo y dame 4 tips prácticos para tejer sin perder vueltas.'
+      ? 'Lee el patrón y dame 4 tips prácticos para tejer sin perder vueltas.'
       : 'Dame un tip rápido de crochet para hoy.')
 
   let textoPdf = ''
@@ -482,12 +528,16 @@ export async function pedirAyudaIa(opts: {
       proyectoId: opts.proyectoId,
       pregunta,
     })
+    if (opts.signal?.aborted) {
+      const e = new Error('Abortado')
+      e.name = 'AbortError'
+      throw e
+    }
     textoPdf = ctx.textoPdf
     resumenPatron = ctx.resumenPatron
     aviso = ctx.aviso
     archivosLeidos = ctx.archivosLeidos
   } else if (opts.proyectoId || opts.patronId) {
-    // Contexto mínimo, sin tocar archivos
     if (opts.proyectoId) {
       const proy = await getProyecto(opts.proyectoId)
       if (proy) {
@@ -501,11 +551,16 @@ export async function pedirAyudaIa(opts: {
     }
   }
 
+  const amplia = usarPdf && quiereLecturaAmplia(pregunta)
   const proveedor = iaProveedor()
   if (proveedor === 'ollama') {
-    resumenPatron = acortar(resumenPatron, usarPdf ? 1200 : 400)
+    resumenPatron = acortar(resumenPatron, usarPdf ? 1000 : 280)
+    // Ya viene fragmentado; no recortar de más
     if (usarPdf) {
-      textoPdf = acortar(textoPdf, Number(process.env.OLLAMA_PDF_CHARS || 4500))
+      const tope = Number(
+        process.env.OLLAMA_PDF_CHARS || (amplia ? 9000 : 6500),
+      )
+      textoPdf = acortar(textoPdf, tope)
     }
   }
 
@@ -519,21 +574,42 @@ export async function pedirAyudaIa(opts: {
     resumenPatron && `Contexto breve:\n${resumenPatron}`,
     usarPdf &&
       textoPdf &&
-      `Texto del patrón / PDF (usa esto para responder):\n${textoPdf}`,
+      `Texto del patrón / PDF (basate en esto; no inventes):\n${textoPdf}`,
     usarPdf && aviso && `Nota: ${aviso}`,
     `Pregunta:\n${pregunta}`,
-    'Responde ya, corto y concreto.',
+    amplia
+      ? 'Respondé con estructura clara y completa pero sin relleno.'
+      : 'Respondé ya, profesional, corta y concreta.',
   ]
     .filter(Boolean)
     .join('\n\n')
 
+  const genOpts = {
+    signal: opts.signal,
+    maxTokens: usarPdf ? (amplia ? 520 : 360) : 220,
+    numPredict: usarPdf ? (amplia ? 320 : 240) : 160,
+    numCtx: usarPdf ? (amplia ? 6144 : 4096) : 2048,
+  }
+
   const respuesta =
     proveedor === 'openai'
-      ? await llamarOpenAI(userContent, system)
-      : await llamarOllama(userContent, system)
+      ? await llamarOpenAI(userContent, system, {
+          maxTokens: genOpts.maxTokens,
+          signal: genOpts.signal,
+        })
+      : await llamarOllama(userContent, system, {
+          numPredict: genOpts.numPredict,
+          numCtx: genOpts.numCtx,
+          signal: genOpts.signal,
+        })
 
   const avisoFinal = usarPdf
-    ? [aviso || undefined, archivosLeidos.length ? `Leí: ${archivosLeidos.join(', ')}.` : undefined]
+    ? [
+        aviso || undefined,
+        archivosLeidos.length
+          ? `Leí: ${archivosLeidos.join(', ')}.`
+          : undefined,
+      ]
         .filter(Boolean)
         .join(' ')
     : undefined
