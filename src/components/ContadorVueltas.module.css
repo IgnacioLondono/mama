@@ -2,7 +2,7 @@
   background: var(--color-surface-solid);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
-  padding: 0.55rem 0.55rem 0.65rem;
+  padding: 0.45rem 0.5rem 0.55rem;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -11,7 +11,7 @@
 
 .eyebrow {
   margin: 0;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -19,29 +19,29 @@
 }
 
 .title {
-  font-size: 0.98rem;
-  margin: 0 0 0.35rem;
+  font-size: 0.92rem;
+  margin: 0 0 0.3rem;
   line-height: 1.15;
 }
 
 .modo {
   display: inline-flex;
   gap: 0.15rem;
-  padding: 0.12rem;
-  margin: 0 auto 0.4rem;
+  padding: 0.1rem;
+  margin: 0 auto 0.35rem;
   border-radius: 999px;
   background: var(--color-hover-soft);
 }
 
 .modoBtn {
-  min-height: 1.75rem;
-  padding: 0.2rem 0.55rem;
+  min-height: 1.65rem;
+  padding: 0.15rem 0.5rem;
   border: none;
   border-radius: 999px;
   background: transparent;
   color: var(--color-ink-soft);
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
 }
 
 .modoOn {
@@ -50,30 +50,79 @@
   box-shadow: 0 1px 4px rgba(42, 36, 32, 0.1);
 }
 
+.objetivoBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0 0 0.35rem;
+}
+
 .objetivo {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  margin: 0 auto 0.45rem;
-  font-size: 0.75rem;
+  gap: 0.25rem;
+  margin: 0;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--color-ink-soft);
 }
 
+.objetivoRow {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .objetivo input {
-  width: 3.6rem;
+  width: 4.2rem;
   text-align: center;
-  min-height: 1.9rem;
-  padding: 0.15rem 0.25rem;
+  min-height: 2rem;
+  padding: 0.2rem 0.3rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-sm);
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   background: var(--color-surface);
   color: var(--color-ink);
+}
+
+.objBtn {
+  min-height: 2rem;
+  min-width: 2.3rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.preset,
+.presetOn {
+  min-height: 1.7rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+.presetOn {
+  border-color: var(--color-coral);
+  background: rgba(196, 95, 72, 0.14);
+  color: var(--color-coral-deep);
 }
 
 .number {
@@ -91,42 +140,42 @@
 }
 
 .current {
-  font-size: clamp(1.85rem, 6vw, 2.6rem);
+  font-size: clamp(1.7rem, 5.5vw, 2.35rem);
   font-weight: 600;
   color: var(--color-coral);
 }
 
 .sep {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   color: var(--color-ink-soft);
   margin: 0 0.05rem;
 }
 
 .total {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   color: var(--color-ink-soft);
 }
 
 .hint {
-  margin: 0.15rem 0 0.45rem;
+  margin: 0.1rem 0 0.35rem;
   color: var(--color-ink-soft);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
 }
 
 .controls {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
+  gap: 0.35rem;
   max-width: 100%;
   margin: 0 auto;
   width: 100%;
 }
 
 .ctrl {
-  min-height: 3.1rem;
+  min-height: 2.85rem;
   border: none;
   border-radius: var(--radius-sm);
-  font-size: 1.75rem;
+  font-size: 1.6rem;
   font-weight: 500;
   line-height: 1;
   transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
@@ -155,20 +204,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   margin-top: auto;
-  padding-top: 0.45rem;
+  padding-top: 0.35rem;
 }
 
 .footer .btn {
-  min-height: 2.1rem;
-  padding: 0.3rem 0.7rem;
-  font-size: 0.82rem;
+  min-height: 1.95rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
 }
 
 .doneMsg {
   margin: 0;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--color-sage-deep);
 }

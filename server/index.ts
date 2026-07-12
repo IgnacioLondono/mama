@@ -382,7 +382,7 @@ async function main() {
     if (req.body?.vueltasObjetivo != null) {
       objetivo = Math.max(
         1,
-        Math.min(999, Math.floor(Number(req.body.vueltasObjetivo))),
+        Math.min(9999, Math.floor(Number(req.body.vueltasObjetivo))),
       )
     }
     let progreso = existing.progreso
