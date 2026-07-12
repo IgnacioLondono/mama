@@ -107,6 +107,11 @@ async function cargarContexto(opts: {
   return { textoPdf, resumenPatron, aviso }
 }
 
+function acortarParaOllama(texto: string, max = 3500): string {
+  if (texto.length <= max) return texto
+  return `${texto.slice(0, max)}\n…(recortado para ir más rápido)`
+}
+
 async function llamarOpenAI(userContent: string): Promise<string> {
   const key = process.env.OPENAI_API_KEY!.trim()
   const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini'
@@ -151,6 +156,12 @@ async function llamarOllama(userContent: string): Promise<string> {
     body: JSON.stringify({
       model,
       stream: false,
+      keep_alive: '10m',
+      options: {
+        num_ctx: 4096,
+        num_predict: 350,
+        temperature: 0.6,
+      },
       messages: [
         { role: 'system', content: SYSTEM },
         { role: 'user', content: userContent },
@@ -179,10 +190,16 @@ export async function pedirAyudaIa(opts: {
     )
   }
 
-  const { textoPdf, resumenPatron, aviso } = await cargarContexto(opts)
+  let { textoPdf, resumenPatron, aviso } = await cargarContexto(opts)
   const pregunta =
     opts.pregunta?.trim() ||
     'Lee lo que hay y dame 4 tips prácticos para tejer este amigurumi sin perder vueltas.'
+
+  const proveedor = iaProveedor()
+  if (proveedor === 'ollama') {
+    textoPdf = acortarParaOllama(textoPdf, 3500)
+    resumenPatron = acortarParaOllama(resumenPatron, 1500)
+  }
 
   const userContent = [
     resumenPatron && `Datos del cuaderno:\n${resumenPatron}`,
@@ -193,7 +210,6 @@ export async function pedirAyudaIa(opts: {
     .filter(Boolean)
     .join('\n\n')
 
-  const proveedor = iaProveedor()
   const respuesta =
     proveedor === 'openai'
       ? await llamarOpenAI(userContent)
