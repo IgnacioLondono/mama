@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import styles from './Modal.module.css'
 
 interface Props {
@@ -67,7 +68,7 @@ export function Modal({
   const sizeClass =
     size === 'xl' ? styles.dialogXl : size === 'lg' ? styles.dialogLg : ''
 
-  return (
+  return createPortal(
     <div
       className={styles.backdrop}
       role="presentation"
@@ -123,6 +124,7 @@ export function Modal({
           </footer>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
