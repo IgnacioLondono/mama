@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { api } from '../lib/api'
+import { mergeProgresoFromCache, saveMesaProgreso } from '../lib/mesaSession'
 import type { Material, ModoVueltas, Patron, Proyecto } from '../types'
 
 interface AppDataContextValue {
@@ -72,6 +73,16 @@ function replaceProyecto(list: Proyecto[], updated: Proyecto) {
   return list.map((p) => (p.id === updated.id ? updated : p))
 }
 
+function cacheProyecto(p: Proyecto) {
+  saveMesaProgreso(p.id, {
+    progreso: p.progreso,
+    parteActivaId: p.parteActivaId,
+    modoVueltas: p.modoVueltas,
+    vueltasObjetivo: p.vueltasObjetivo,
+    archivoActivoId: p.archivoActivoId,
+  })
+}
+
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -87,7 +98,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       api.getMateriales(),
     ])
     setPatrones(p)
-    setProyectos(pr)
+    setProyectos(pr.map(mergeProgresoFromCache))
     setMateriales(m)
     setNeedsLogin(false)
     setError(null)
@@ -187,6 +198,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const updateProyecto = useCallback(async (id: string, patch: Partial<Proyecto>) => {
     const updated = await api.updateProyecto(id, patch)
+    cacheProyecto(updated)
     setProyectos((prev) => replaceProyecto(prev, updated))
   }, [])
 
@@ -200,16 +212,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               ? Number.MAX_SAFE_INTEGER
               : Math.max(1, p.vueltasObjetivo)
           const clamped = Math.max(0, Math.min(vuelta, max))
-          return {
+          const next = {
             ...p,
             progreso: p.progreso.map((pr) =>
               pr.parteId === parteId ? { ...pr, vueltaActual: clamped } : pr,
             ),
           }
+          cacheProyecto(next)
+          return next
         }),
       )
       try {
         const updated = await api.setVuelta(proyectoId, parteId, vuelta)
+        cacheProyecto(updated)
         setProyectos((prev) => replaceProyecto(prev, updated))
       } catch (err) {
         await refresh()
@@ -221,11 +236,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const setParteActiva = useCallback(async (proyectoId: string, parteId: string) => {
     const updated = await api.setParte(proyectoId, parteId)
+    cacheProyecto(updated)
     setProyectos((prev) => replaceProyecto(prev, updated))
   }, [])
 
   const setModoVueltas = useCallback(async (proyectoId: string, modo: ModoVueltas) => {
     const updated = await api.setVueltasConfig(proyectoId, { modoVueltas: modo })
+    cacheProyecto(updated)
     setProyectos((prev) => replaceProyecto(prev, updated))
   }, [])
 
@@ -233,6 +250,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const updated = await api.setVueltasConfig(proyectoId, {
       vueltasObjetivo: n,
     })
+    cacheProyecto(updated)
     setProyectos((prev) => replaceProyecto(prev, updated))
   }, [])
 
@@ -248,12 +266,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const uploadArchivo = useCallback(async (proyectoId: string, file: File) => {
     const updated = await api.uploadArchivo(proyectoId, file)
+    cacheProyecto(updated)
     setProyectos((prev) => replaceProyecto(prev, updated))
   }, [])
 
   const replaceArchivoFn = useCallback(
     async (proyectoId: string, archivoId: string, file: File) => {
       const updated = await api.replaceArchivo(proyectoId, archivoId, file)
+      cacheProyecto(updated)
       setProyectos((prev) => replaceProyecto(prev, updated))
     },
     [],
@@ -262,6 +282,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const renameArchivoFn = useCallback(
     async (proyectoId: string, archivoId: string, nombre: string) => {
       const updated = await api.renameArchivo(proyectoId, archivoId, nombre)
+      cacheProyecto(updated)
       setProyectos((prev) => replaceProyecto(prev, updated))
     },
     [],
@@ -270,6 +291,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const deleteArchivoFn = useCallback(
     async (proyectoId: string, archivoId: string) => {
       const updated = await api.deleteArchivo(proyectoId, archivoId)
+      cacheProyecto(updated)
       setProyectos((prev) => replaceProyecto(prev, updated))
     },
     [],

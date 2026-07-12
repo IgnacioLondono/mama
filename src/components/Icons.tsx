@@ -83,3 +83,12 @@ export function IconMoon(props: IconProps) {
     </svg>
   )
 }
+
+export function IconChat(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v7A2.5 2.5 0 0 1 16.5 16H11l-3.5 3v-3H7.5A2.5 2.5 0 0 1 5 13.5v-7Z" />
+      <path d="M8.5 9h7M8.5 12h4.5" />
+    </svg>
+  )
+}

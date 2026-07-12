@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AsistenteIa } from '../components/AsistenteIa'
 import { ContadorVueltas } from '../components/ContadorVueltas'
+import { IaBurbuja } from '../components/IaBurbuja'
 import { Modal } from '../components/Modal'
 import { ProgresoBar } from '../components/ProgresoBar'
 import { VisorArchivos } from '../components/VisorArchivos'
 import { useAppData } from '../context/AppDataContext'
+import {
+  loadMesaSession,
+  saveMesaSession,
+  type MesaPanel,
+} from '../lib/mesaSession'
 import styles from './ProyectoDetalle.module.css'
 
-type Panel = 'pasos' | 'partes' | 'apuntes' | 'ia'
+type Panel = Exclude<MesaPanel, null> | null
 
 export function ProyectoDetalle() {
   const { id } = useParams()
@@ -30,12 +35,24 @@ export function ProyectoDetalle() {
 
   const proyecto = id ? getProyecto(id) : undefined
   const patron = proyecto ? getPatron(proyecto.patronId) : undefined
+  const session = id ? loadMesaSession(id) : null
   const [notas, setNotas] = useState(proyecto?.notas ?? '')
-  const [panel, setPanel] = useState<Panel | null>('pasos')
+  const [panel, setPanel] = useState<Panel>(session?.panel ?? 'pasos')
   const [confirmFin, setConfirmFin] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [editNombre, setEditNombre] = useState(false)
   const [nombreDraft, setNombreDraft] = useState(proyecto?.nombre ?? '')
+
+  useEffect(() => {
+    if (!id) return
+    const s = loadMesaSession(id)
+    setPanel(s.panel ?? 'pasos')
+  }, [id])
+
+  useEffect(() => {
+    if (!id) return
+    saveMesaSession(id, { panel })
+  }, [id, panel])
 
   useEffect(() => {
     setNotas(proyecto?.notas ?? '')
@@ -227,22 +244,24 @@ export function ProyectoDetalle() {
           />
         </div>
         <div className={styles.stageCount}>
-          <ContadorVueltas
-            parteNombre={parteActiva.nombre}
-            vueltaActual={vueltaActual}
-            vueltasTotales={objetivo}
-            modoVueltas={proyecto.modoVueltas}
-            onChange={(n) => void setVuelta(proyecto.id, parteActiva.id, n)}
-            onModoChange={(modo) => void setModoVueltas(proyecto.id, modo)}
-            onObjetivoChange={(n) => void setVueltasObjetivo(proyecto.id, n)}
-            onSiguienteParte={siguienteParte}
-            tieneSiguiente={tieneSiguiente}
-          />
-          {proyecto.modoVueltas === 'fijo' ? (
-            <div className={styles.miniProgress}>
-              <ProgresoBar value={progresoPorcentaje(proyecto)} />
-            </div>
-          ) : null}
+          <div className={styles.countStick}>
+            <ContadorVueltas
+              parteNombre={parteActiva.nombre}
+              vueltaActual={vueltaActual}
+              vueltasTotales={objetivo}
+              modoVueltas={proyecto.modoVueltas}
+              onChange={(n) => void setVuelta(proyecto.id, parteActiva.id, n)}
+              onModoChange={(modo) => void setModoVueltas(proyecto.id, modo)}
+              onObjetivoChange={(n) => void setVueltasObjetivo(proyecto.id, n)}
+              onSiguienteParte={siguienteParte}
+              tieneSiguiente={tieneSiguiente}
+            />
+            {proyecto.modoVueltas === 'fijo' ? (
+              <div className={styles.miniProgress}>
+                <ProgresoBar value={progresoPorcentaje(proyecto)} />
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -274,15 +293,6 @@ export function ProyectoDetalle() {
             onClick={() => togglePanel('apuntes')}
           >
             Apuntes
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={panel === 'ia'}
-            className={panel === 'ia' ? styles.tabOn : styles.tab}
-            onClick={() => togglePanel('ia')}
-          >
-            Ayuda
           </button>
         </div>
 
@@ -343,17 +353,13 @@ export function ProyectoDetalle() {
             />
           </div>
         ) : null}
-
-        {panel === 'ia' ? (
-          <div className={styles.drawerBody}>
-            <AsistenteIa
-              proyectoId={proyecto.id}
-              patronId={patron.id}
-              archivoId={proyecto.archivoActivoId}
-            />
-          </div>
-        ) : null}
       </div>
+
+      <IaBurbuja
+        proyectoId={proyecto.id}
+        patronId={patron.id}
+        archivoId={proyecto.archivoActivoId}
+      />
     </div>
   )
 }

@@ -8,18 +8,12 @@
 .nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 0.35rem;
   padding: 0.3rem 0.4rem;
   border-bottom: 1px solid var(--color-line);
   background: var(--color-surface-solid);
   flex-shrink: 0;
-}
-
-.nav .btn {
-  min-height: 2rem;
-  padding: 0.25rem 0.55rem;
-  font-size: 0.8rem;
 }
 
 .pageLabel {
@@ -35,21 +29,45 @@
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
   padding: 0.35rem;
   background: var(--color-viewer);
-  touch-action: pan-x pan-y pinch-zoom;
+  touch-action: pan-y pinch-zoom;
 }
 
-.canvas {
+.pages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.page {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.pageImg {
   max-width: 100%;
   height: auto;
   display: block;
   box-shadow: var(--shadow-soft);
   background: #fff;
   border-radius: 2px;
+}
+
+.pageSkeleton {
+  width: 100%;
+  min-height: 18rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-soft);
+  font-weight: 650;
+  font-size: 0.88rem;
 }
 
 .loading,

@@ -215,7 +215,13 @@ export function VisorArchivos({
             vueltas.
           </p>
         ) : esPdf ? (
-          <PdfVisor key={activo.id + activo.subidoEn} url={url} titulo={activo.nombre} />
+          <PdfVisor
+            key={activo.id + activo.subidoEn}
+            url={url}
+            titulo={activo.nombre}
+            proyectoId={_proyectoId}
+            archivoId={activo.id}
+          />
         ) : esImagen ? (
           <div className={styles.imgWrap}>
             <img src={url} alt={activo.nombre} className={styles.img} />
