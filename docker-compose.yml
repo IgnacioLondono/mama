@@ -10,8 +10,8 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tejidos}
     volumes:
       - tejidos_mysql:/var/lib/mysql
-    ports:
-      - "3306:3306"
+    # Sin publicar 3306 al host: evita choques si ya hay otro MySQL.
+    # La app llega a mysql por la red interna del stack.
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-rootsegura}"]
       interval: 5s
