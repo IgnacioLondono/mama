@@ -284,6 +284,7 @@ export function ProyectoDetalle() {
               renameArchivo(proyecto.id, archivoId, nombre)
             }
             onDelete={(archivoId) => deleteArchivo(proyecto.id, archivoId)}
+            modoMesa
           />
         </div>
         <div className={styles.stageCount}>

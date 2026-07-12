@@ -23,6 +23,8 @@ interface Props {
   onReplace?: (archivoId: string, file: File) => Promise<void>
   onRename?: (archivoId: string, nombre: string) => Promise<void>
   onDelete: (archivoId: string) => Promise<void>
+  /** En la mesa: solo el PDF, sin barra de archivos */
+  modoMesa?: boolean
 }
 
 export function VisorArchivos({
@@ -34,6 +36,7 @@ export function VisorArchivos({
   onReplace,
   onRename,
   onDelete,
+  modoMesa = false,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const replaceRef = useRef<HTMLInputElement>(null)
@@ -128,60 +131,66 @@ export function VisorArchivos({
   const esImagen = activo?.tipo.startsWith('image/')
 
   return (
-    <section className={styles.wrap} aria-label="Archivos del patrón">
-      <div className={styles.toolbar}>
-        <h2 className={styles.title}>Patrón / PDF</h2>
-        <div className={styles.toolbarBtns}>
-          {activo && onReplace ? (
+    <section
+      className={`${styles.wrap} ${modoMesa ? styles.wrapMesa : ''}`}
+      aria-label="Archivos del patrón"
+    >
+      {!modoMesa ? (
+        <div className={styles.toolbar}>
+          <h2 className={styles.title}>Patrón / PDF</h2>
+          <div className={styles.toolbarBtns}>
+            {activo && onReplace ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={busy}
+                onClick={() => replaceRef.current?.click()}
+              >
+                Reemplazar
+              </button>
+            ) : null}
+            {activo && onRename ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={busy}
+                onClick={() => {
+                  setRenameValue(activo.nombre)
+                  setRenameId(activo.id)
+                }}
+              >
+                Renombrar
+              </button>
+            ) : null}
             <button
               type="button"
-              className="btn btn-ghost"
+              className="btn btn-secondary"
               disabled={busy}
-              onClick={() => replaceRef.current?.click()}
+              onClick={() => inputRef.current?.click()}
             >
-              Reemplazar
+              {busy ? 'Un momento…' : 'Subir archivo'}
             </button>
-          ) : null}
-          {activo && onRename ? (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              disabled={busy}
-              onClick={() => {
-                setRenameValue(activo.nombre)
-                setRenameId(activo.id)
-              }}
-            >
-              Renombrar
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={busy}
-            onClick={() => inputRef.current?.click()}
-          >
-            {busy ? 'Un momento…' : 'Subir archivo'}
-          </button>
+          </div>
         </div>
-        <input
-          ref={inputRef}
-          type="file"
-          className="sr-only"
-          accept={ACCEPT}
-          multiple
-          onChange={(e) => void onPick(e)}
-        />
-        <input
-          ref={replaceRef}
-          type="file"
-          className="sr-only"
-          accept={ACCEPT}
-          onChange={(e) => void onReplacePick(e)}
-        />
-      </div>
+      ) : null}
 
-      {archivos.length > 0 ? (
+      <input
+        ref={inputRef}
+        type="file"
+        className="sr-only"
+        accept={ACCEPT}
+        multiple
+        onChange={(e) => void onPick(e)}
+      />
+      <input
+        ref={replaceRef}
+        type="file"
+        className="sr-only"
+        accept={ACCEPT}
+        onChange={(e) => void onReplacePick(e)}
+      />
+
+      {!modoMesa && archivos.length > 0 ? (
         <div className={styles.tabs}>
           {archivos.map((a) => (
             <div key={a.id} className={styles.tabRow}>
@@ -210,10 +219,20 @@ export function VisorArchivos({
 
       <div className={styles.viewer}>
         {!activo || !url ? (
-          <p className={styles.empty}>
-            Sube el PDF del patrón (o una foto) para verlo aquí mientras cuentas
-            vueltas.
-          </p>
+          <div className={styles.empty}>
+            <p>
+              Sube el PDF del patrón (o una foto) para verlo aquí mientras
+              cuentas vueltas.
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => inputRef.current?.click()}
+            >
+              {busy ? 'Un momento…' : 'Subir archivo'}
+            </button>
+          </div>
         ) : esPdf ? (
           <PdfVisor
             key={activo.id + activo.subidoEn}
