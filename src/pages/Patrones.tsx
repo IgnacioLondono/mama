@@ -80,6 +80,19 @@ function carpetaLabel(tema: IconoPatron, color: ColorCarpeta) {
   return `${temaLbl} · ${colorLbl}`
 }
 
+function carpetaKeyFrom(tema: IconoPatron, color: ColorCarpeta) {
+  return `${tema}::${color}`
+}
+
+function parseCarpetaKey(key: string) {
+  const [tema, color] = key.split('::')
+  if (!tema || !color) return null
+  return {
+    tema: normalizarIconoPatron(tema as IconoPatron),
+    color: normalizarColorCarpeta(color as ColorCarpeta),
+  }
+}
+
 export function Patrones() {
   const {
     patrones,
@@ -94,7 +107,7 @@ export function Patrones() {
   const [orden, setOrden] = useState<Orden>('carpeta')
   const [modal, setModal] = useState<ModalKind | null>(null)
   const [editId, setEditId] = useState<string | null>(null)
-  const [lockCarpeta, setLockCarpeta] = useState(false)
+  const [carpetaSeleccion, setCarpetaSeleccion] = useState<string>('nueva')
   const [form, setForm] = useState(emptyForm)
   const [pendientes, setPendientes] = useState<File[]>([])
   const [subiendo, setSubiendo] = useState(false)
@@ -177,8 +190,35 @@ export function Patrones() {
     )
   }, [filtered, carpetasVacias])
 
+  const carpetasDisponibles = useMemo(() => {
+    const map = new Map<
+      string,
+      { tema: IconoPatron; color: ColorCarpeta; count: number }
+    >()
+    for (const p of patrones) {
+      const tema = normalizarIconoPatron(p.icono)
+      const color = normalizarColorCarpeta(p.colorCarpeta)
+      const key = carpetaKeyFrom(tema, color)
+      const cur = map.get(key)
+      if (cur) cur.count++
+      else map.set(key, { tema, color, count: 1 })
+    }
+    for (const v of carpetasVacias) {
+      const key = carpetaKeyFrom(v.tema, v.color)
+      if (!map.has(key)) {
+        map.set(key, { tema: v.tema, color: v.color, count: 0 })
+      }
+    }
+    return [...map.values()].sort((a, b) =>
+      carpetaLabel(a.tema, a.color).localeCompare(
+        carpetaLabel(b.tema, b.color),
+        'es',
+      ),
+    )
+  }, [patrones, carpetasVacias])
+
   const formCarpetaLabel =
-    modal === 'nuevo' && lockCarpeta
+    modal === 'nuevo' && carpetaSeleccion !== 'nueva'
       ? carpetaLabel(
           normalizarIconoPatron(form.icono),
           normalizarColorCarpeta(form.colorCarpeta),
@@ -188,7 +228,7 @@ export function Patrones() {
   function closeForm() {
     setModal(null)
     setEditId(null)
-    setLockCarpeta(false)
+    setCarpetaSeleccion('nueva')
     setForm(emptyForm)
     setPendientes([])
     setDragging(false)
@@ -199,17 +239,28 @@ export function Patrones() {
     setModal('nuevaCarpeta')
   }
 
-  function openNew(prefill?: Partial<typeof emptyForm>) {
+  function openNew() {
     setEditId(null)
-    setLockCarpeta(false)
-    setForm({ ...emptyForm, ...prefill })
     setPendientes([])
+    const first = carpetasDisponibles[0]
+    if (first) {
+      const key = carpetaKeyFrom(first.tema, first.color)
+      setCarpetaSeleccion(key)
+      setForm({
+        ...emptyForm,
+        icono: first.tema,
+        colorCarpeta: first.color,
+      })
+    } else {
+      setCarpetaSeleccion('nueva')
+      setForm(emptyForm)
+    }
     setModal('nuevo')
   }
 
   function openNewInCarpeta(tema: IconoPatron, color: ColorCarpeta) {
     setEditId(null)
-    setLockCarpeta(true)
+    setCarpetaSeleccion(carpetaKeyFrom(tema, color))
     setForm({
       ...emptyForm,
       icono: tema,
@@ -217,6 +268,18 @@ export function Patrones() {
     })
     setPendientes([])
     setModal('nuevo')
+  }
+
+  function onCarpetaSeleccionChange(value: string) {
+    setCarpetaSeleccion(value)
+    if (value === 'nueva') return
+    const parsed = parseCarpetaKey(value)
+    if (!parsed) return
+    setForm({
+      ...form,
+      icono: parsed.tema,
+      colorCarpeta: parsed.color,
+    })
   }
 
   function confirmNuevaCarpeta() {
@@ -237,7 +300,7 @@ export function Patrones() {
 
   function startEdit(p: Patron) {
     setEditId(p.id)
-    setLockCarpeta(false)
+    setCarpetaSeleccion('nueva')
     setForm({
       nombre: p.nombre,
       descripcion: p.descripcion,
@@ -355,8 +418,33 @@ export function Patrones() {
 
   function renderPatronForm(mode: 'nuevo' | 'editar') {
     const isEdit = mode === 'editar'
+    const carpetaNueva = carpetaSeleccion === 'nueva'
     return (
       <form className={styles.form} onSubmit={(e) => void onSubmit(e)}>
+        {!isEdit ? (
+          <div className={styles.field}>
+            <label htmlFor="nuevo-carpeta">Carpeta</label>
+            <select
+              id="nuevo-carpeta"
+              value={carpetaSeleccion}
+              onChange={(e) => onCarpetaSeleccionChange(e.target.value)}
+            >
+              {carpetasDisponibles.map(({ tema, color, count }) => (
+                <option
+                  key={carpetaKeyFrom(tema, color)}
+                  value={carpetaKeyFrom(tema, color)}
+                >
+                  {carpetaLabel(tema, color)}
+                  {count === 0
+                    ? ' · vacía'
+                    : ` · ${count} ${count === 1 ? 'patrón' : 'patrones'}`}
+                </option>
+              ))}
+              <option value="nueva">+ Nueva carpeta…</option>
+            </select>
+          </div>
+        ) : null}
+
         {!isEdit && formCarpetaLabel ? (
           <div className={styles.folderPreset}>
             <span
@@ -523,7 +611,7 @@ export function Patrones() {
           </section>
         </div>
 
-        {isEdit || !lockCarpeta ? (
+        {isEdit || carpetaNueva ? (
           <TemaColorPicker
             compact
             icono={form.icono}
@@ -841,7 +929,7 @@ export function Patrones() {
                   <div className={styles.carpetaHeadActions}>
                     <button
                       type="button"
-                      className={`btn btn-secondary ${styles.carpetaAddBtn}`}
+                      className={`btn ${styles.carpetaAddBtn}`}
                       onClick={() => openNewInCarpeta(tema, color)}
                     >
                       Anotar patrón
