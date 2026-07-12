@@ -82,3 +82,22 @@
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
 }
+
+.compact .preview {
+  width: 3.25rem;
+  height: 3.25rem;
+}
+
+.compact .temaGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.compact .temaBtn {
+  min-height: 2.65rem;
+  font-size: 0.58rem;
+}
+
+.compact .colorBtn {
+  width: 1.85rem;
+  height: 1.85rem;
+}

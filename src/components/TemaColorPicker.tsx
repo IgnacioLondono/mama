@@ -51,14 +51,21 @@ interface Props {
   color: ColorCarpeta
   onIcono: (v: IconoPatron) => void
   onColor: (v: ColorCarpeta) => void
+  compact?: boolean
 }
 
-export function TemaColorPicker({ icono, color, onIcono, onColor }: Props) {
+export function TemaColorPicker({
+  icono,
+  color,
+  onIcono,
+  onColor,
+  compact = false,
+}: Props) {
   const colorHex = COLORES_CARPETA.find((c) => c.id === color)?.hex ?? '#c45f48'
   const renderIcon = iconMap[icono] ?? iconMap.carpeta
 
   return (
-    <div className={styles.wrap}>
+    <div className={`${styles.wrap} ${compact ? styles.compact : ''}`}>
       <div
         className={styles.preview}
         style={{ background: colorHex }}

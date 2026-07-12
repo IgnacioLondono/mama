@@ -26,6 +26,69 @@
   margin: 0;
 }
 
+.topActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.formCarpetaHint {
+  margin: 0 0 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: rgba(95, 125, 100, 0.12);
+  color: var(--color-ink-soft);
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.folderPreset {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+.folderPresetIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-sm);
+  color: #faf6ef;
+  flex-shrink: 0;
+}
+
+.folderPresetText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.folderPresetText span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.folderPresetText strong {
+  font-size: 0.92rem;
+  color: var(--color-ink);
+}
+
+.nuevaCarpeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .form {
   display: flex;
   flex-direction: column;
@@ -232,7 +295,12 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.45rem;
-  padding-top: 0.25rem;
+  position: sticky;
+  bottom: 0;
+  margin-top: 0.35rem;
+  padding: 0.65rem 0 0.15rem;
+  border-top: 1px solid var(--color-line);
+  background: var(--color-surface-solid);
 }
 
 .carpetaForm {
@@ -271,10 +339,36 @@
 
 .carpetaHead {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   color: #faf6ef;
+}
+
+.carpetaMeta {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.carpetaHeadActions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.carpetaAddBtn {
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: var(--color-ink) !important;
+  border-color: transparent !important;
+  font-size: 0.82rem;
+}
+
+.carpetaDelBtn {
+  color: #faf6ef !important;
+  min-width: 2rem;
+  padding-inline: 0.45rem !important;
 }
 
 .carpetaIcon {
@@ -402,6 +496,40 @@
   flex-wrap: wrap;
   gap: 0.35rem;
   margin-top: 0.15rem;
+}
+
+.addPatron {
+  list-style: none;
+}
+
+.addPatronBtn {
+  width: 100%;
+  min-height: 5.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-solid);
+  color: var(--color-ink-soft);
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.addPatronBtn:hover {
+  border-color: var(--color-coral);
+  color: var(--color-coral-deep);
+  background: rgba(196, 95, 72, 0.06);
+}
+
+.addPatronPlus {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-coral);
 }
 
 .search,
@@ -605,6 +733,17 @@
   border: 1px dashed var(--color-line);
   border-radius: var(--radius-md);
   background: rgba(255, 253, 249, 0.4);
+}
+
+.emptyShelf p {
+  margin: 0 0 0.85rem;
+}
+
+.emptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
 }
 
 @media (min-width: 820px) {

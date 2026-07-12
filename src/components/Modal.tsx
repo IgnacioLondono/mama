@@ -9,7 +9,7 @@ interface Props {
   cancelLabel?: string
   danger?: boolean
   busy?: boolean
-  size?: 'md' | 'lg'
+  size?: 'md' | 'lg' | 'xl'
   /** Si false, no muestra botones (el contenido trae su propio pie). */
   showActions?: boolean
   onConfirm?: () => void
@@ -64,6 +64,9 @@ export function Modal({
     onConfirm()
   }
 
+  const sizeClass =
+    size === 'xl' ? styles.dialogXl : size === 'lg' ? styles.dialogLg : ''
+
   return (
     <div
       className={styles.backdrop}
@@ -73,17 +76,31 @@ export function Modal({
       }}
     >
       <div
-        className={`${styles.dialog} ${size === 'lg' ? styles.dialogLg : ''}`}
+        className={`${styles.dialog} ${sizeClass}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2 id={titleId} className={styles.title}>
-          {title}
-        </h2>
+        <header className={styles.head}>
+          <h2 id={titleId} className={styles.title}>
+            {title}
+          </h2>
+          <button
+            type="button"
+            className={styles.close}
+            onClick={onCancel}
+            disabled={busy}
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </header>
+
         <div className={styles.body}>{children}</div>
+
         {showActions ? (
-          <div className={styles.actions}>
+          <footer className={styles.actions}>
             <button
               ref={cancelRef}
               type="button"
@@ -103,7 +120,7 @@ export function Modal({
                 {busy ? 'Un momento…' : confirmLabel}
               </button>
             ) : null}
-          </div>
+          </footer>
         ) : null}
       </div>
     </div>
