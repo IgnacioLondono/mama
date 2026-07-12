@@ -155,7 +155,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
         (err instanceof Error && err.name === 'AbortError') ||
         ac.signal.aborted
       ) {
-        setMsgs((prev) => [
+        setMsgs([
           ...historial,
           {
             id: uid(),
