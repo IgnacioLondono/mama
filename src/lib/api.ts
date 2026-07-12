@@ -219,8 +219,19 @@ export const api = {
     patronId?: string
     archivoId?: string
   }) =>
-    request<{ respuesta: string; aviso?: string; proveedor: string }>(
-      '/ia/ayuda',
+    request<{
+      respuesta: string
+      aviso?: string
+      proveedor: string
+      archivosLeidos?: string[]
+    }>('/ia/ayuda', { method: 'POST', body: JSON.stringify(body) }),
+  iaPrecargar: (body: {
+    proyectoId?: string
+    patronId?: string
+    archivoId?: string
+  }) =>
+    request<{ ok: boolean; archivos: string[]; proveedor: string }>(
+      '/ia/precargar',
       { method: 'POST', body: JSON.stringify(body) },
     ),
 }

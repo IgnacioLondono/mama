@@ -47,9 +47,18 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
       .then((s) => {
         setOk(s.configurada)
         setProveedor(s.proveedor)
+        if (s.configurada) {
+          void api
+            .iaPrecargar({
+              proyectoId,
+              patronId,
+              archivoId: archivoId ?? undefined,
+            })
+            .catch(() => {})
+        }
       })
       .catch(() => setOk(false))
-  }, [])
+  }, [proyectoId, patronId, archivoId])
 
   useEffect(() => {
     const el = listRef.current

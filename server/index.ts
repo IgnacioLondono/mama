@@ -28,7 +28,14 @@ import {
   upsertPatron,
   upsertProyecto,
 } from './db.ts'
-import { iaConfigurada, iaProveedor, pedirAyudaIa } from './ia.ts'
+import {
+  calentarIaEnSegundoPlano,
+  iaConfigurada,
+  iaProveedor,
+  invalidarTextoArchivo,
+  pedirAyudaIa,
+  precargarIa,
+} from './ia.ts'
 import type {
   Material,
   ModoVueltas,
@@ -95,6 +102,21 @@ async function main() {
       res.json(result)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Falló la IA.'
+      res.status(400).json({ error: message })
+    }
+  })
+
+  app.post('/api/ia/precargar', async (req, res) => {
+    try {
+      const result = await precargarIa({
+        archivoId: req.body?.archivoId as string | undefined,
+        patronId: req.body?.patronId as string | undefined,
+        proyectoId: req.body?.proyectoId as string | undefined,
+      })
+      res.json(result)
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo precargar.'
       res.status(400).json({ error: message })
     }
   })
@@ -222,6 +244,7 @@ async function main() {
         ruta: req.file.filename,
         subidoEn,
       })
+      invalidarTextoArchivo(row.id)
       await upsertPatron({ ...patron, archivoActivoId: row.id })
       res.json(await getPatron(patron.id))
     },
@@ -258,6 +281,7 @@ async function main() {
         res.status(404).json({ error: 'No está.' })
         return
       }
+      invalidarTextoArchivo(req.params.archivoId)
       await deleteArchivo(req.params.archivoId)
       const refreshed = (await getPatron(patron.id))!
       const activo =
@@ -467,6 +491,7 @@ async function main() {
         ruta: req.file.filename,
         subidoEn,
       })
+      invalidarTextoArchivo(row.id)
       await upsertProyecto({
         ...proyecto,
         archivoActivoId: row.id,
@@ -507,6 +532,7 @@ async function main() {
         res.status(404).json({ error: 'No está.' })
         return
       }
+      invalidarTextoArchivo(req.params.archivoId)
       await deleteArchivo(req.params.archivoId)
       const refreshed = (await getProyecto(proyecto.id))!
       const activo =
@@ -649,6 +675,7 @@ async function main() {
   app.listen(PORT, () => {
     console.log(`Tejidos de Mamá → http://localhost:${PORT}`)
     if (APP_PASSWORD) console.log('Clave de acceso activada (APP_PASSWORD).')
+    calentarIaEnSegundoPlano()
   })
 }
 
