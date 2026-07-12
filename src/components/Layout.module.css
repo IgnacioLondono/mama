@@ -150,16 +150,21 @@
 }
 
 .shellWork {
-  min-height: 100dvh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   background: var(--color-desk);
+  display: flex;
+  flex-direction: column;
 }
 
 .shellWork .header {
   min-height: 0;
+  flex-shrink: 0;
 }
 
 .shellWork .inner {
-  min-height: 2.6rem;
+  min-height: 2.35rem;
 }
 
 .shellWork .brandText {
@@ -171,8 +176,8 @@
 }
 
 .shellWork .link {
-  padding: 0.3rem 0.55rem;
-  font-size: 0.82rem;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.78rem;
 }
 
 .mainWork {
@@ -180,7 +185,8 @@
   width: 100%;
   margin: 0;
   padding: 0;
-  min-height: calc(100dvh - 2.6rem);
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }

@@ -1,17 +1,18 @@
 .root {
   position: fixed;
   right: 0.85rem;
-  bottom: 0.85rem;
+  /* Por encima del cajón Pasos/Partes, no pegada al borde */
+  bottom: 4.75rem;
   z-index: 40;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.55rem;
+  gap: 0.5rem;
 }
 
 .bubble {
-  width: 3.4rem;
-  height: 3.4rem;
+  width: 3.15rem;
+  height: 3.15rem;
   border: none;
   border-radius: 50%;
   background: var(--color-coral);
@@ -33,9 +34,9 @@
 }
 
 .panel {
-  width: min(23rem, calc(100vw - 1.5rem));
-  height: min(72dvh, 34rem);
-  max-height: min(72dvh, 34rem);
+  width: min(22rem, calc(100vw - 1.5rem));
+  height: min(58dvh, 28rem);
+  max-height: min(58dvh, 28rem);
   display: flex;
   flex-direction: column;
   background: var(--color-surface-solid);
@@ -50,38 +51,44 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.55rem 0.7rem;
+  padding: 0.45rem 0.6rem;
   border-bottom: 1px solid var(--color-line);
   flex-shrink: 0;
 }
 
 .panelHead h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .close {
-  width: 2rem;
-  height: 2rem;
+  width: 1.85rem;
+  height: 1.85rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-ink);
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   line-height: 1;
 }
 
 .panelBody {
   flex: 1;
   min-height: 0;
-  padding: 0.55rem 0.7rem 0.7rem;
+  padding: 0.45rem 0.6rem 0.55rem;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-@media (max-width: 719px) {
+@media (max-width: 959px) {
   .root {
-    bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    bottom: 5.5rem;
+    right: 0.65rem;
+  }
+
+  .panel {
+    height: min(52dvh, 24rem);
+    max-height: min(52dvh, 24rem);
   }
 }
