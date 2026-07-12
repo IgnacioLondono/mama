@@ -35,7 +35,7 @@ MYSQL_PASSWORD=elige-otra
 APP_PASSWORD=clave-para-entrar
 ```
 
-Publica el puerto `3001` (o pon un proxy/nginx delante).
+La app queda en el puerto **8088** (o pon un proxy/nginx delante).
 
 Los PDFs quedan en el volumen `tejidos_uploads` y la base en `tejidos_mysql`.
 

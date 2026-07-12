@@ -41,7 +41,7 @@ services:
     volumes:
       - tejidos_uploads:/app/data/uploads
     ports:
-      - "3001:3001"
+      - "8088:3001"
 
 volumes:
   tejidos_mysql:
