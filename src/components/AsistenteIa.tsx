@@ -13,6 +13,7 @@ import {
   saveIaChat,
   type IaChatMsg,
 } from '../lib/iaChatSession'
+import { IconSend, IconStop } from './Icons'
 import styles from './AsistenteIa.module.css'
 
 interface Props {
@@ -60,6 +61,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
   const skipFirstSave = useRef(true)
   const stickBottom = useRef(true)
   const abortRef = useRef<AbortController | null>(null)
+  const userStopRef = useRef(false)
 
   useEffect(() => {
     setMsgs(loadIaChat(scope))
@@ -100,6 +102,15 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
     el.scrollTop = el.scrollHeight
   }, [msgs, loading])
 
+  useEffect(() => {
+    return () => {
+      // Al desmontar, cancelar sin dejar aviso de “detenido”
+      userStopRef.current = false
+      abortRef.current?.abort()
+      abortRef.current = null
+    }
+  }, [])
+
   function onScrollMsgs() {
     const el = listRef.current
     if (!el) return
@@ -121,6 +132,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
     const q = preguntaTexto.trim()
     if (!q || loading) return
 
+    userStopRef.current = false
     abortRef.current?.abort()
     const ac = new AbortController()
     abortRef.current = ac
@@ -141,7 +153,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
         },
         { signal: ac.signal },
       )
-      if (ac.signal.aborted) return
+      if (ac.signal.aborted || userStopRef.current) return
       setMsgs(() => {
         const next = [...historial]
         if (res.aviso) {
@@ -151,18 +163,23 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
         return next
       })
     } catch (err) {
-      if (
+      const aborted =
+        userStopRef.current ||
         (err instanceof Error && err.name === 'AbortError') ||
         ac.signal.aborted
-      ) {
-        setMsgs([
-          ...historial,
-          {
-            id: uid(),
-            rol: 'aviso',
-            texto: 'Respuesta detenida.',
-          },
-        ])
+
+      if (aborted) {
+        // Solo mostrar aviso si el usuario pulsó Detener
+        if (userStopRef.current) {
+          setMsgs([
+            ...historial,
+            {
+              id: uid(),
+              rol: 'aviso',
+              texto: 'Respuesta detenida.',
+            },
+          ])
+        }
         return
       }
       setMsgs(() => [
@@ -182,6 +199,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
   }
 
   function detener() {
+    userStopRef.current = true
     abortRef.current?.abort()
     abortRef.current = null
     setLoading(false)
@@ -480,9 +498,14 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
           className={loading ? styles.stopSend : styles.send}
           disabled={!loading && (!pregunta.trim() || !!editId)}
           aria-label={loading ? 'Detener' : 'Enviar'}
+          title={loading ? 'Detener' : 'Enviar'}
           onClick={loading ? detener : undefined}
         >
-          {loading ? 'Detener' : 'Enviar'}
+          {loading ? (
+            <IconStop width={18} height={18} />
+          ) : (
+            <IconSend width={18} height={18} />
+          )}
         </button>
       </form>
     </div>

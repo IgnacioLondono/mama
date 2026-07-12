@@ -121,3 +121,20 @@ export function IconTrash(props: IconProps) {
     </svg>
   )
 }
+
+export function IconSend(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 12h12" />
+      <path d="m12 6 6 6-6 6" />
+    </svg>
+  )
+}
+
+export function IconStop(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}

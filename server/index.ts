@@ -93,10 +93,12 @@ async function main() {
 
   app.post('/api/ia/ayuda', async (req, res) => {
     const ac = new AbortController()
-    const onClose = () => {
+    // Solo si el cliente corta la conexión ANTES de terminar la respuesta.
+    // NO usar req.on('close'): se dispara al terminar el body y aborta siempre.
+    const onClientGone = () => {
       if (!res.writableEnded) ac.abort()
     }
-    req.on('close', onClose)
+    res.on('close', onClientGone)
     try {
       const result = await pedirAyudaIa({
         pregunta: req.body?.pregunta as string | undefined,
@@ -106,6 +108,7 @@ async function main() {
         usarPdf: Boolean(req.body?.usarPdf),
         signal: ac.signal,
       })
+      if (ac.signal.aborted || res.writableEnded) return
       res.json(result)
     } catch (err) {
       if (
@@ -116,9 +119,9 @@ async function main() {
         return
       }
       const message = err instanceof Error ? err.message : 'Falló la IA.'
-      res.status(400).json({ error: message })
+      if (!res.headersSent) res.status(400).json({ error: message })
     } finally {
-      req.off('close', onClose)
+      res.off('close', onClientGone)
     }
   })
 
