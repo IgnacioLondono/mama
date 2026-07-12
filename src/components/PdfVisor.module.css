@@ -2,7 +2,8 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 10rem;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .nav {
@@ -52,10 +53,9 @@
   border-radius: 2px;
 }
 
-.loading,
-.fallback {
+.loading {
   margin: 0;
-  padding: 1rem 0.65rem;
+  padding: 0.75rem 0.5rem;
   text-align: center;
   color: var(--color-ink-soft);
   font-weight: 600;
@@ -63,15 +63,44 @@
   font-size: 0.85rem;
 }
 
-.fallback {
+.fallback,
+.fallbackInline {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.45rem;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  color: var(--color-ink-soft);
+  font-weight: 600;
+  width: 100%;
+  font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
-@media (min-width: 960px) {
-  .root {
-    min-height: 0;
-  }
+.fallback {
+  height: 100%;
+  overflow: auto;
+}
+
+.fallback p,
+.fallbackInline p {
+  margin: 0;
+}
+
+.fallbackActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.openBtn {
+  min-height: 1.85rem !important;
+  padding: 0.2rem 0.7rem !important;
+  font-size: 0.8rem !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: none !important;
 }

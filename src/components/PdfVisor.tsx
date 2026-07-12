@@ -9,14 +9,26 @@ interface Props {
   archivoId?: string
 }
 
+function esCancelado(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const e = err as { name?: string; message?: string }
+  return (
+    e.name === 'RenderingCancelledException' ||
+    /cancel/i.test(e.message ?? '')
+  )
+}
+
 export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const docRef = useRef<any>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderTaskRef = useRef<any>(null)
   const [paginas, setPaginas] = useState(0)
   const [pagina, setPagina] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [pintando, setPintando] = useState(false)
   const [error, setError] = useState('')
   const [ancho, setAncho] = useState(0)
 
@@ -84,6 +96,12 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
     void load()
     return () => {
       cancelled = true
+      try {
+        renderTaskRef.current?.cancel?.()
+      } catch {
+        /* ignore */
+      }
+      renderTaskRef.current = null
       const doc = docRef.current
       docRef.current = null
       try {
@@ -100,34 +118,68 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
     async function render() {
       const doc = docRef.current
       const canvas = canvasRef.current
-      if (!doc || !canvas || paginas === 0 || ancho <= 0) return
+      if (loading || error || !doc || !canvas || paginas === 0 || ancho <= 0) {
+        return
+      }
 
+      setPintando(true)
       try {
+        try {
+          renderTaskRef.current?.cancel?.()
+        } catch {
+          /* ignore */
+        }
+
         const page = await doc.getPage(pagina)
         if (cancelled) return
+
         const base = page.getViewport({ scale: 1 })
-        const scale = Math.min(2.6, Math.max(1, (ancho - 8) / base.width))
+        if (!base.width || !base.height) {
+          throw new Error('Página sin tamaño.')
+        }
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2)
+        const fit = Math.max(0.35, (ancho - 8) / base.width)
+        const scale = Math.min(2.2, fit) * dpr
         const viewport = page.getViewport({ scale })
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return
+        const ctx = canvas.getContext('2d', { alpha: false })
+        if (!ctx) throw new Error('Sin canvas.')
+
         canvas.width = Math.floor(viewport.width)
         canvas.height = Math.floor(viewport.height)
-        await page.render({
+        canvas.style.width = `${Math.floor(viewport.width / dpr)}px`
+        canvas.style.height = `${Math.floor(viewport.height / dpr)}px`
+
+        const task = page.render({
           canvasContext: ctx,
           viewport,
           canvas,
-        }).promise
+          background: '#ffffff',
+        })
+        renderTaskRef.current = task
+        await task.promise
+        if (cancelled) return
         if (wrapRef.current) wrapRef.current.scrollTop = 0
-      } catch {
-        if (!cancelled) setError('No se pudo mostrar esta página.')
+      } catch (err) {
+        if (!cancelled && !esCancelado(err)) {
+          setError('No se pudo mostrar esta página.')
+        }
+      } finally {
+        if (!cancelled) setPintando(false)
       }
     }
 
     void render()
     return () => {
       cancelled = true
+      try {
+        renderTaskRef.current?.cancel?.()
+      } catch {
+        /* ignore */
+      }
+      renderTaskRef.current = null
     }
-  }, [pagina, paginas, url, ancho])
+  }, [pagina, paginas, url, ancho, loading, error])
 
   useEffect(() => {
     if (!proyectoId || !archivoId || paginas === 0 || loading) return
@@ -139,15 +191,20 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   }, [pagina, paginas, proyectoId, archivoId, loading])
 
   function ir(delta: number) {
+    setError('')
     setPagina((p) => Math.min(paginas, Math.max(1, p + delta)))
   }
 
-  if (error) {
+  function reintentar() {
+    setError('')
+  }
+
+  if (error && !docRef.current) {
     return (
       <div className={styles.fallback}>
         <p>{error}</p>
         <a
-          className="btn btn-primary"
+          className={`btn btn-primary ${styles.openBtn}`}
           href={url}
           target="_blank"
           rel="noreferrer"
@@ -170,7 +227,11 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
           Anterior
         </button>
         <span className={styles.pageLabel}>
-          {loading ? 'Cargando…' : `Pág. ${pagina} / ${paginas || '—'}`}
+          {loading
+            ? 'Cargando…'
+            : pintando
+              ? `Pág. ${pagina}…`
+              : `Pág. ${pagina} / ${paginas || '—'}`}
         </span>
         <button
           type="button"
@@ -181,12 +242,40 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
           Siguiente
         </button>
       </div>
-      <div ref={wrapRef} className={styles.scroll}>
+
+      {error ? (
+        <div className={styles.fallbackInline}>
+          <p>{error}</p>
+          <div className={styles.fallbackActions}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={reintentar}
+            >
+              Reintentar
+            </button>
+            <a
+              className={`btn btn-primary ${styles.openBtn}`}
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Abrir PDF
+            </a>
+          </div>
+        </div>
+      ) : null}
+
+      <div ref={wrapRef} className={styles.scroll} hidden={!!error}>
         {loading ? (
           <p className={styles.loading}>Preparando el patrón…</p>
-        ) : (
-          <canvas ref={canvasRef} className={styles.canvas} />
-        )}
+        ) : null}
+        {/* Canvas siempre montado (oculto al cargar) para evitar carreras de ref */}
+        <canvas
+          ref={canvasRef}
+          className={styles.canvas}
+          style={{ display: loading ? 'none' : 'block' }}
+        />
       </div>
     </div>
   )

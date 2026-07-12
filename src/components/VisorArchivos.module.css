@@ -93,11 +93,19 @@
 
 .viewer {
   flex: 1;
-  min-height: 10rem;
+  min-height: 0;
   border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--color-viewer);
   border: 1px solid var(--color-line);
+  display: flex;
+  flex-direction: column;
+}
+
+.viewer > * {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
 }
 
 .frame {
@@ -126,10 +134,18 @@
 .fallback {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 1rem 0.65rem;
-  text-align: center;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  height: 100%;
+}
+
+.fallback .btn {
+  min-height: 1.85rem;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.8rem;
 }
 
 .empty {
