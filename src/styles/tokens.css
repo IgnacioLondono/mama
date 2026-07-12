@@ -1,0 +1,72 @@
+:root,
+[data-theme='light'] {
+  --color-bg: #e8e2d6;
+  --color-bg-deep: #ddd5c6;
+  --color-surface: #f4efe6;
+  --color-surface-solid: #faf6ef;
+  --color-ink: #2a2420;
+  --color-ink-soft: #5a524a;
+  --color-muted: #7a7168;
+  --color-coral: #c45f48;
+  --color-coral-deep: #a34c38;
+  --color-sage: #5f7d64;
+  --color-sage-deep: #4a6450;
+  --color-wool: #b89a78;
+  --color-line: rgba(42, 36, 32, 0.14);
+  --color-danger: #b54a3a;
+  --color-warn-bg: #f0e0cc;
+  --color-ok: #5f7d64;
+  --color-desk: #d4cbb8;
+  --color-backdrop: rgba(20, 16, 12, 0.48);
+  --body-grad-a: rgba(232, 226, 214, 0.92);
+  --body-grad-b: rgba(221, 213, 198, 0.98);
+  --body-line: rgba(42, 36, 32, 0.025);
+
+  --font-display: 'Fraunces', 'Georgia', serif;
+  --font-body: 'Source Sans 3', 'Segoe UI', sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --shadow-soft: 0 4px 18px rgba(42, 36, 32, 0.08);
+  --space: 1rem;
+  --nav-h: 3.25rem;
+  --max-w: 1400px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 220ms;
+  --color-on-coral: #fff;
+  --color-viewer: #ebe4d6;
+  --color-hover-soft: rgba(42, 36, 32, 0.06);
+  --color-badge-media: #7a5e3a;
+}
+
+[data-theme='dark'] {
+  --color-bg: #1a1816;
+  --color-bg-deep: #121010;
+  --color-surface: #2a2622;
+  --color-surface-solid: #322d28;
+  --color-ink: #f4eee6;
+  --color-ink-soft: #d6cdc2;
+  --color-muted: #c4b9ad;
+  --color-coral: #e07a62;
+  --color-coral-deep: #f0a08c;
+  --color-sage: #7fa686;
+  --color-sage-deep: #a8c4ac;
+  --color-wool: #d2b896;
+  --color-line: rgba(244, 238, 230, 0.16);
+  --color-danger: #f08a7e;
+  --color-warn-bg: #3f3226;
+  --color-ok: #7fa686;
+  --color-desk: #161412;
+  --color-backdrop: rgba(0, 0, 0, 0.62);
+  --body-grad-a: rgba(26, 24, 22, 0.98);
+  --body-grad-b: rgba(18, 16, 16, 1);
+  --body-line: rgba(242, 235, 227, 0.04);
+  --shadow-soft: 0 8px 28px rgba(0, 0, 0, 0.4);
+  --color-on-coral: #1a1210;
+  --color-viewer: #1e1b18;
+  --color-hover-soft: rgba(244, 238, 230, 0.06);
+  --color-badge-media: #e0c9a4;
+}

@@ -1,0 +1,353 @@
+.desk {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.kicker {
+  margin: 0 0 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-sage-deep);
+}
+
+.top h1 {
+  font-size: clamp(1.55rem, 4vw, 2rem);
+  margin: 0;
+}
+
+.bench {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--color-desk);
+  border: 1px solid var(--color-line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.benchBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0.25rem 0.55rem;
+  border-bottom: 1px dashed rgba(42, 36, 32, 0.18);
+}
+
+.benchBar h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.benchActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.benchGrid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.dropzone {
+  min-height: 14rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 1.25rem 1rem;
+  border-radius: var(--radius-md);
+  border: 2px dashed rgba(42, 36, 32, 0.22);
+  background:
+    repeating-linear-gradient(
+      -12deg,
+      transparent,
+      transparent 10px,
+      rgba(42, 36, 32, 0.02) 10px,
+      rgba(42, 36, 32, 0.02) 11px
+    ),
+    var(--color-surface-solid);
+  text-align: center;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.dropOn {
+  border-color: var(--color-coral);
+  background: rgba(196, 95, 72, 0.08);
+}
+
+.dropFilled {
+  border-style: solid;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.dropTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--color-ink);
+}
+
+.dropText {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: 0.95rem;
+}
+
+.dropHint {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.fileTray {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.fileTray li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.fileTray li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileTray button {
+  flex-shrink: 0;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.9rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-solid);
+  border: 1px solid var(--color-line);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.field textarea {
+  min-height: 6.5rem;
+  resize: vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: 2px solid rgba(196, 95, 72, 0.3);
+  border-color: var(--color-coral);
+}
+
+.metaRow {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.shelfBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.search,
+.filter {
+  min-height: 2.6rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-solid);
+  color: var(--color-ink);
+}
+
+.search {
+  flex: 1 1 12rem;
+}
+
+.filter {
+  flex: 0 1 auto;
+}
+
+.shelf {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.shelfItem {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-solid);
+  border: 1px solid var(--color-line);
+  align-items: center;
+}
+
+.thumbLink {
+  display: block;
+  text-decoration: none;
+}
+
+.noThumb {
+  width: 4.75rem;
+  height: 5.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-line);
+  background: rgba(42, 36, 32, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.shelfActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  grid-column: 1 / -1;
+}
+
+.itemTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.itemTitle {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 550;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.itemTitle:hover {
+  color: var(--color-coral-deep);
+  text-decoration: none;
+}
+
+.desc {
+  margin-bottom: 0.3rem;
+  font-size: 0.95rem;
+}
+
+.meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.emptyShelf {
+  margin: 0;
+  padding: 1.75rem 1rem;
+  text-align: center;
+  color: var(--color-muted);
+  font-weight: 600;
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 253, 249, 0.4);
+}
+
+@media (min-width: 820px) {
+  .benchGrid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(16rem, 0.9fr);
+    align-items: stretch;
+    min-height: 18rem;
+  }
+
+  .dropzone {
+    min-height: 100%;
+  }
+
+  .metaRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .shelfItem {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+  }
+
+  .shelfActions {
+    grid-column: auto;
+  }
+
+  .noThumb {
+    width: 5.5rem;
+    height: 6.75rem;
+  }
+}

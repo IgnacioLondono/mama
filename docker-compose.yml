@@ -1,0 +1,48 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: tejidos-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootsegura}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-tejidos}
+      MYSQL_USER: ${MYSQL_USER:-tejidos}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tejidos}
+    volumes:
+      - tejidos_mysql:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-rootsegura}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    container_name: tejidos-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT: 3001
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-tejidos}
+      MYSQL_USER: ${MYSQL_USER:-tejidos}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tejidos}
+      APP_PASSWORD: ${APP_PASSWORD:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+    volumes:
+      - tejidos_uploads:/app/data/uploads
+    ports:
+      - "3001:3001"
+
+volumes:
+  tejidos_mysql:
+  tejidos_uploads:
