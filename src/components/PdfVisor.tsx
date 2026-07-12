@@ -10,19 +10,15 @@ interface Props {
 }
 
 export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
-  const restoredRef = useRef(false)
-  const saveTimer = useRef<number | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const docRef = useRef<any>(null)
+  const [paginas, setPaginas] = useState(0)
+  const [pagina, setPagina] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [paginas, setPaginas] = useState(0)
-  const [hechas, setHechas] = useState(0)
-  const [srcs, setSrcs] = useState<string[]>([])
   const [ancho, setAncho] = useState(0)
-
-  useEffect(() => {
-    restoredRef.current = false
-  }, [url, archivoId])
 
   useEffect(() => {
     const el = wrapRef.current
@@ -38,17 +34,13 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let doc: any = null
+    docRef.current = null
 
-    async function run() {
-      if (ancho <= 40) return
+    async function load() {
       setLoading(true)
       setError('')
       setPaginas(0)
-      setHechas(0)
-      setSrcs([])
-
+      setPagina(1)
       try {
         const pdfjs = await import('pdfjs-dist')
         const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url')
@@ -57,107 +49,98 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         const res = await fetch(url)
         if (!res.ok) throw new Error('No se pudo cargar el PDF.')
         const data = new Uint8Array(await res.arrayBuffer())
-        doc = await pdfjs.getDocument({ data }).promise
-        if (cancelled) return
-
+        const doc = await pdfjs.getDocument({ data }).promise
+        if (cancelled) {
+          try {
+            await (doc as { destroy?: () => Promise<void> }).destroy?.()
+          } catch {
+            /* ignore */
+          }
+          return
+        }
+        docRef.current = doc
         const total = doc.numPages as number
         setPaginas(total)
-        setLoading(false)
 
-        const next: string[] = Array.from({ length: total }, () => '')
-        for (let n = 1; n <= total; n++) {
-          if (cancelled) return
-          const page = await doc.getPage(n)
-          const base = page.getViewport({ scale: 1 })
-          const scale = Math.min(2.4, Math.max(1, (ancho - 8) / base.width))
-          const viewport = page.getViewport({ scale })
-          const canvas = document.createElement('canvas')
-          canvas.width = Math.floor(viewport.width)
-          canvas.height = Math.floor(viewport.height)
-          const ctx = canvas.getContext('2d')
-          if (!ctx) continue
-          await page.render({
-            canvasContext: ctx,
-            viewport,
-            canvas,
-          }).promise
-          if (cancelled) return
-          next[n - 1] = canvas.toDataURL('image/jpeg', 0.88)
-          setSrcs([...next])
-          setHechas(n)
+        let start = 1
+        if (proyectoId && archivoId) {
+          const saved = loadMesaPdfPos(proyectoId, archivoId)
+          if (saved?.pagina && saved.pagina >= 1) {
+            start = Math.min(saved.pagina, total)
+          }
         }
+        setPagina(start)
       } catch (err) {
         if (!cancelled) {
           setError(
             err instanceof Error ? err.message : 'No se pudo leer el PDF.',
           )
-          setLoading(false)
         }
       } finally {
-        try {
-          await doc?.destroy?.()
-        } catch {
-          /* ignore */
-        }
+        if (!cancelled) setLoading(false)
       }
     }
 
-    void run()
+    void load()
+    return () => {
+      cancelled = true
+      const doc = docRef.current
+      docRef.current = null
+      try {
+        void doc?.destroy?.()
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [url, proyectoId, archivoId])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function render() {
+      const doc = docRef.current
+      const canvas = canvasRef.current
+      if (!doc || !canvas || paginas === 0 || ancho <= 0) return
+
+      try {
+        const page = await doc.getPage(pagina)
+        if (cancelled) return
+        const base = page.getViewport({ scale: 1 })
+        const scale = Math.min(2.6, Math.max(1, (ancho - 8) / base.width))
+        const viewport = page.getViewport({ scale })
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        canvas.width = Math.floor(viewport.width)
+        canvas.height = Math.floor(viewport.height)
+        await page.render({
+          canvasContext: ctx,
+          viewport,
+          canvas,
+        }).promise
+        if (wrapRef.current) wrapRef.current.scrollTop = 0
+      } catch {
+        if (!cancelled) setError('No se pudo mostrar esta página.')
+      }
+    }
+
+    void render()
     return () => {
       cancelled = true
     }
-  }, [url, ancho])
+  }, [pagina, paginas, url, ancho])
 
-  // Restaurar scroll cuando haya contenido suficiente
   useEffect(() => {
-    if (restoredRef.current) return
-    if (!proyectoId || !archivoId) return
-    const el = wrapRef.current
-    if (!el || hechas < 1) return
-
-    const saved = loadMesaPdfPos(proyectoId, archivoId)
-    if (!saved || (saved.scrollTop <= 0 && saved.scrollRatio <= 0)) {
-      restoredRef.current = true
-      return
-    }
-
-    const target =
-      saved.scrollRatio > 0
-        ? saved.scrollRatio * Math.max(el.scrollHeight - el.clientHeight, 0)
-        : saved.scrollTop
-
-    // Esperar a que el scrollHeight crezca lo bastante
-    if (el.scrollHeight < target + el.clientHeight && hechas < paginas) {
-      return
-    }
-
-    el.scrollTop = target
-    restoredRef.current = true
-  }, [hechas, paginas, proyectoId, archivoId, srcs])
-
-  function persistScroll() {
-    const el = wrapRef.current
-    if (!el || !proyectoId || !archivoId) return
-    const max = Math.max(el.scrollHeight - el.clientHeight, 1)
+    if (!proyectoId || !archivoId || paginas === 0 || loading) return
     saveMesaPdfPos(proyectoId, archivoId, {
-      scrollTop: el.scrollTop,
-      scrollRatio: el.scrollTop / max,
+      pagina,
+      scrollTop: 0,
+      scrollRatio: 0,
     })
-  }
+  }, [pagina, paginas, proyectoId, archivoId, loading])
 
-  function onScroll() {
-    if (!proyectoId || !archivoId) return
-    if (saveTimer.current) window.clearTimeout(saveTimer.current)
-    saveTimer.current = window.setTimeout(persistScroll, 180)
+  function ir(delta: number) {
+    setPagina((p) => Math.min(paginas, Math.max(1, p + delta)))
   }
-
-  useEffect(() => {
-    return () => {
-      if (saveTimer.current) window.clearTimeout(saveTimer.current)
-      persistScroll()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyectoId, archivoId])
 
   if (error) {
     return (
@@ -178,33 +161,31 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   return (
     <div className={styles.root}>
       <div className={styles.nav}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          disabled={loading || pagina <= 1}
+          onClick={() => ir(-1)}
+        >
+          Anterior
+        </button>
         <span className={styles.pageLabel}>
-          {loading && hechas === 0
-            ? 'Cargando…'
-            : hechas < paginas
-              ? `Scroll · cargando ${hechas}/${paginas}`
-              : `${paginas} páginas · desliza (se guarda)`}
+          {loading ? 'Cargando…' : `Pág. ${pagina} / ${paginas || '—'}`}
         </span>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          disabled={loading || pagina >= paginas}
+          onClick={() => ir(1)}
+        >
+          Siguiente
+        </button>
       </div>
-      <div ref={wrapRef} className={styles.scroll} onScroll={onScroll}>
-        {loading && srcs.length === 0 ? (
+      <div ref={wrapRef} className={styles.scroll}>
+        {loading ? (
           <p className={styles.loading}>Preparando el patrón…</p>
         ) : (
-          <div className={styles.pages}>
-            {(srcs.length ? srcs : ['']).map((src, i) => (
-              <div key={`${url}-p${i}`} className={styles.page}>
-                {src ? (
-                  <img
-                    src={src}
-                    alt={`Página ${i + 1}`}
-                    className={styles.pageImg}
-                  />
-                ) : (
-                  <div className={styles.pageSkeleton}>Página {i + 1}…</div>
-                )}
-              </div>
-            ))}
-          </div>
+          <canvas ref={canvasRef} className={styles.canvas} />
         )}
       </div>
     </div>

@@ -4,6 +4,8 @@ import { loadJson, saveJson } from './storage'
 export type MesaPanel = 'pasos' | 'partes' | 'apuntes' | null
 
 export interface MesaPdfPos {
+  /** Página actual (1-based). Preferido frente al scroll. */
+  pagina?: number
   scrollRatio: number
   scrollTop: number
 }
