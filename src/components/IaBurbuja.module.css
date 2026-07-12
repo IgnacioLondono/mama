@@ -33,8 +33,9 @@
 }
 
 .panel {
-  width: min(22rem, calc(100vw - 1.5rem));
-  max-height: min(70dvh, 32rem);
+  width: min(23rem, calc(100vw - 1.5rem));
+  height: min(72dvh, 34rem);
+  max-height: min(72dvh, 34rem);
   display: flex;
   flex-direction: column;
   background: var(--color-surface-solid);
@@ -51,6 +52,7 @@
   gap: 0.5rem;
   padding: 0.55rem 0.7rem;
   border-bottom: 1px solid var(--color-line);
+  flex-shrink: 0;
 }
 
 .panelHead h2 {
@@ -70,9 +72,12 @@
 }
 
 .panelBody {
-  padding: 0.7rem;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-height: 0;
+  padding: 0.55rem 0.7rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 @media (max-width: 719px) {

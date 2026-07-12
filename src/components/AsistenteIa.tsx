@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { api } from '../lib/api'
 import styles from './AsistenteIa.module.css'
 
@@ -8,21 +8,38 @@ interface Props {
   archivoId?: string | null
 }
 
+type Msg = {
+  id: string
+  rol: 'yo' | 'bot' | 'aviso' | 'error'
+  texto: string
+}
+
 const SUGERENCIAS = [
-  'Explícame las abreviaciones de este patrón',
-  'Dame tips para no perderme en las vueltas',
+  'Explícame las abreviaciones',
+  'Tips para no perderme en las vueltas',
   '¿Cómo coser mejor las piezas?',
-  '¿Qué hago si el relleno se ve irregular?',
+  'Relleno irregular, ¿qué hago?',
 ]
+
+function uid() {
+  return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+}
 
 export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
   const [ok, setOk] = useState<boolean | null>(null)
   const [proveedor, setProveedor] = useState('')
   const [pregunta, setPregunta] = useState('')
-  const [respuesta, setRespuesta] = useState('')
-  const [aviso, setAviso] = useState('')
+  const [msgs, setMsgs] = useState<Msg[]>([
+    {
+      id: 'hola',
+      rol: 'bot',
+      texto:
+        'Hola. Puedo mirar el patrón y el PDF y darte tips claros. ¿Qué necesitas?',
+    },
+  ])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const listRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     void api
@@ -34,12 +51,20 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
       .catch(() => setOk(false))
   }, [])
 
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+  }, [msgs, loading])
+
   async function preguntar(texto?: string) {
     const q = (texto ?? pregunta).trim()
-    if (!q) return
+    if (!q || loading) return
+
+    setPregunta('')
+    setMsgs((prev) => [...prev, { id: uid(), rol: 'yo', texto: q }])
     setLoading(true)
-    setError('')
-    setAviso('')
+
     try {
       const res = await api.iaAyuda({
         pregunta: q,
@@ -47,13 +72,27 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
         patronId,
         archivoId: archivoId ?? undefined,
       })
-      setRespuesta(res.respuesta)
-      setAviso(res.aviso ?? '')
-      setPregunta('')
+      setMsgs((prev) => {
+        const next = [...prev]
+        if (res.aviso) {
+          next.push({ id: uid(), rol: 'aviso', texto: res.aviso })
+        }
+        next.push({ id: uid(), rol: 'bot', texto: res.respuesta })
+        return next
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo pedir ayuda.')
+      setMsgs((prev) => [
+        ...prev,
+        {
+          id: uid(),
+          rol: 'error',
+          texto:
+            err instanceof Error ? err.message : 'No se pudo pedir ayuda.',
+        },
+      ])
     } finally {
       setLoading(false)
+      inputRef.current?.focus()
     }
   }
 
@@ -69,61 +108,103 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
   if (!ok) {
     return (
       <div className={styles.box}>
-        <p className={styles.title}>Ayuda de tejido</p>
         <p className={styles.muted}>
-          Todavía no está conectada. En el servidor pon{' '}
-          <code>OPENAI_API_KEY</code> o <code>OLLAMA_BASE_URL</code>.
+          Todavía no está conectada. En el servidor pon Ollama o una clave de
+          IA.
         </p>
       </div>
     )
   }
 
   return (
-    <div className={styles.box}>
+    <div className={styles.chat}>
       <div className={styles.head}>
-        <p className={styles.title}>Ayuda de tejido</p>
-        <span className={styles.badge}>{proveedor}</span>
+        <span className={styles.headTitle}>Chat de tejido</span>
+        {proveedor ? <span className={styles.badge}>{proveedor}</span> : null}
       </div>
-      <p className={styles.muted}>
-        Lee el PDF y lo anotado del patrón, y te da tips claros.
-      </p>
 
-      <div className={styles.chips}>
-        {SUGERENCIAS.map((s) => (
-          <button
-            key={s}
-            type="button"
-            className={styles.chip}
-            disabled={loading}
-            onClick={() => void preguntar(s)}
+      <div ref={listRef} className={styles.msgs} aria-live="polite">
+        {msgs.map((m) => (
+          <div
+            key={m.id}
+            className={
+              m.rol === 'yo'
+                ? styles.rowYo
+                : m.rol === 'aviso'
+                  ? styles.rowAviso
+                  : m.rol === 'error'
+                    ? styles.rowError
+                    : styles.rowBot
+            }
           >
-            {s}
-          </button>
+            <div
+              className={
+                m.rol === 'yo'
+                  ? styles.bubbleYo
+                  : m.rol === 'aviso'
+                    ? styles.bubbleAviso
+                    : m.rol === 'error'
+                      ? styles.bubbleError
+                      : styles.bubbleBot
+              }
+            >
+              {m.texto.split('\n').map((line, i) => (
+                <p key={`${m.id}-${i}`}>{line || '\u00A0'}</p>
+              ))}
+            </div>
+          </div>
         ))}
+
+        {loading ? (
+          <div className={styles.rowBot}>
+            <div className={`${styles.bubbleBot} ${styles.typing}`}>
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        ) : null}
+
+        {!loading && msgs.length <= 1 ? (
+          <div className={styles.chips}>
+            {SUGERENCIAS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={styles.chip}
+                onClick={() => void preguntar(s)}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
-      <form className={styles.form} onSubmit={onSubmit}>
+      <form className={styles.composer} onSubmit={onSubmit}>
         <textarea
+          ref={inputRef}
           value={pregunta}
           onChange={(e) => setPregunta(e.target.value)}
-          placeholder="¿En qué te ayudo con este tejido?"
-          rows={3}
+          placeholder="Escribe un mensaje…"
+          rows={1}
           disabled={loading}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              void preguntar()
+            }
+          }}
         />
-        <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? 'Pensando…' : 'Preguntar'}
+        <button
+          type="submit"
+          className={styles.send}
+          disabled={loading || !pregunta.trim()}
+          aria-label="Enviar"
+        >
+          Enviar
         </button>
       </form>
-
-      {error ? <p className={styles.error}>{error}</p> : null}
-      {aviso ? <p className={styles.aviso}>{aviso}</p> : null}
-      {respuesta ? (
-        <div className={styles.answer}>
-          {respuesta.split('\n').map((line, i) => (
-            <p key={`${i}-${line.slice(0, 12)}`}>{line || '\u00A0'}</p>
-          ))}
-        </div>
-      ) : null}
     </div>
   )
 }
