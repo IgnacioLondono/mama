@@ -92,3 +92,32 @@ export function IconChat(props: IconProps) {
     </svg>
   )
 }
+
+export function IconBrush(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="m14.5 4.5 5 5-9.2 9.2a3.2 3.2 0 0 1-4.5-4.5L14.5 4.5Z" />
+      <path d="m16.2 6.2 1.6-1.6a1.2 1.2 0 0 1 1.7 1.7L17.9 7.9" />
+      <path d="M5.2 18.2c1.4.2 2.6-.2 3.5-1.1" />
+    </svg>
+  )
+}
+
+export function IconEraser(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="m15.5 4.5 4 4-8.5 8.5H7.5L3.5 13.5 15.5 4.5Z" />
+      <path d="M7 17h12" />
+    </svg>
+  )
+}
+
+export function IconTrash(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 7h14" />
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" />
+      <path d="M7.5 7 8.2 18.5A1.5 1.5 0 0 0 9.7 20h4.6a1.5 1.5 0 0 0 1.5-1.5L16.5 7" />
+    </svg>
+  )
+}

@@ -8,6 +8,7 @@ import {
   type PdfMarkPoint,
   type PdfMarkStroke,
 } from '../lib/pdfMarks'
+import { IconBrush, IconEraser, IconTrash } from './Icons'
 import styles from './PdfVisor.module.css'
 
 interface Props {
@@ -451,28 +452,30 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         <div className={styles.markBar}>
           <button
             type="button"
-            className={`${styles.toolBtn} ${pincel && !borrador ? styles.toolOn : ''}`}
+            className={`${styles.iconBtn} ${pincel && !borrador ? styles.toolOn : ''}`}
             onClick={() => {
               setPincel((v) => !v || borrador)
               setBorrador(false)
             }}
-            title="Resaltar líneas"
+            title="Pincel"
+            aria-label="Pincel"
             aria-pressed={pincel && !borrador}
           >
-            Pincel
+            <IconBrush width={18} height={18} />
           </button>
           <button
             type="button"
-            className={`${styles.toolBtn} ${borrador ? styles.toolOn : ''}`}
+            className={`${styles.iconBtn} ${borrador ? styles.toolOn : ''}`}
             disabled={!pincel && strokes.length === 0}
             onClick={() => {
               setPincel(true)
               setBorrador((v) => !v)
             }}
-            title="Borrar marcas"
+            title="Borrar"
+            aria-label="Borrar"
             aria-pressed={borrador}
           >
-            Borrar
+            <IconEraser width={18} height={18} />
           </button>
           <div className={styles.swatches} role="group" aria-label="Color">
             {COLORES_RESALTE.map((c, i) => (
@@ -496,8 +499,9 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
               <button
                 key={g.id}
                 type="button"
-                className={`${styles.toolBtn} ${grosorIdx === i ? styles.toolOn : ''}`}
-                title={`Pincel ${g.label}`}
+                className={`${styles.sizeDot} ${grosorIdx === i ? styles.sizeDotOn : ''}`}
+                title={g.label}
+                aria-label={`Tamaño ${g.label}`}
                 aria-pressed={grosorIdx === i}
                 onClick={() => {
                   setGrosorIdx(i)
@@ -505,18 +509,25 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
                   setBorrador(false)
                 }}
               >
-                {g.label}
+                <span
+                  className={styles.sizeDotInner}
+                  style={{
+                    width: `${0.35 + i * 0.22}rem`,
+                    height: `${0.35 + i * 0.22}rem`,
+                  }}
+                />
               </button>
             ))}
           </div>
           <button
             type="button"
-            className={styles.toolBtn}
+            className={styles.iconBtn}
             disabled={strokes.length === 0}
             onClick={borrarPagina}
-            title="Limpiar marcas de esta página"
+            title="Limpiar página"
+            aria-label="Limpiar página"
           >
-            Limpiar
+            <IconTrash width={18} height={18} />
           </button>
         </div>
       ) : null}
