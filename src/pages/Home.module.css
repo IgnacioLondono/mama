@@ -52,6 +52,27 @@
   margin-right: 0.2rem;
 }
 
+.dupAlert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(196, 95, 72, 0.35);
+  background: rgba(196, 95, 72, 0.1);
+}
+
+.dupAlert p {
+  margin: 0;
+  flex: 1 1 14rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--color-ink);
+  line-height: 1.35;
+}
+
 .board {
   background: var(--color-surface-solid);
   border: 1px solid var(--color-line);
@@ -105,6 +126,36 @@
   background: var(--color-surface);
 }
 
+.jobNext {
+  border-color: rgba(196, 95, 72, 0.45);
+  background: rgba(196, 95, 72, 0.06);
+}
+
+.jobTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.jobTitleRow h3 {
+  margin: 0;
+}
+
+.nextBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.4rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: rgba(196, 95, 72, 0.16);
+  color: var(--color-coral-deep);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .jobMain h3 {
   font-size: 1.2rem;
   margin-bottom: 0.15rem;
@@ -115,6 +166,13 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-ink-soft);
+}
+
+.jobActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .sideTools {

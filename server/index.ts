@@ -328,11 +328,32 @@ async function main() {
   app.post('/api/proyectos', async (req, res) => {
     const patronId = String(req.body?.patronId ?? '')
     const nombre = req.body?.nombre as string | undefined
+    const forceNew = Boolean(req.body?.forceNew)
     const patron = await getPatron(patronId)
     if (!patron) {
       res.status(400).json({ error: 'Patrón no encontrado.' })
       return
     }
+
+    // Evita clones: si ya hay un tejido activo de ese patrón, reutilizarlo.
+    if (!forceNew) {
+      const activos = (await listProyectos()).filter(
+        (p) => p.patronId === patronId && p.estado === 'activo',
+      )
+      if (activos.length > 0) {
+        const best = activos.reduce((a, b) => {
+          const score = (p: Proyecto) =>
+            p.progreso.reduce((s, x) => s + (x.vueltaActual || 0), 0)
+          const sa = score(a)
+          const sb = score(b)
+          if (sb !== sa) return sb > sa ? b : a
+          return b.actualizadoEn.localeCompare(a.actualizadoEn) > 0 ? b : a
+        })
+        res.json(best)
+        return
+      }
+    }
+
     const ahora = new Date().toISOString()
     const proyecto: Proyecto = {
       id: uid('proy'),
@@ -348,6 +369,7 @@ async function main() {
       archivoActivoId: null,
       modoVueltas: 'fijo',
       vueltasObjetivo: patron.partes[0]?.vueltasTotales ?? 10,
+      siguiente: false,
     }
     await upsertProyecto(proyecto)
     res.status(201).json(await getProyecto(proyecto.id))

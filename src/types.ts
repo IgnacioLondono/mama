@@ -6,6 +6,40 @@ export type EstadoProyecto = 'activo' | 'terminado'
 
 export type ModoVueltas = 'fijo' | 'ilimitado'
 
+/** Categoría de la estantería de patrones. */
+export type CategoriaPatron =
+  | 'Amigurumi'
+  | 'Ropa'
+  | 'Accesorios'
+  | 'Hogar'
+  | 'Otro'
+
+/** Color / estilo de carpeta en la tarjeta del patrón. */
+export type IconoPatron =
+  | 'coral'
+  | 'sage'
+  | 'wool'
+  | 'ink'
+  | 'rose'
+  | 'sky'
+
+export const CATEGORIAS_PATRON: CategoriaPatron[] = [
+  'Amigurumi',
+  'Ropa',
+  'Accesorios',
+  'Hogar',
+  'Otro',
+]
+
+export const ICONOS_PATRON: { id: IconoPatron; label: string }[] = [
+  { id: 'coral', label: 'Coral' },
+  { id: 'sage', label: 'Verde' },
+  { id: 'wool', label: 'Lana' },
+  { id: 'ink', label: 'Tinta' },
+  { id: 'rose', label: 'Rosa' },
+  { id: 'sky', label: 'Cielo' },
+]
+
 export interface MaterialPatron {
   nombre: string
   cantidad: string
@@ -24,6 +58,8 @@ export interface Patron {
   descripcion: string
   dificultad: Dificultad
   tiempoEstimado: string
+  categoria: CategoriaPatron
+  icono: IconoPatron
   materiales: MaterialPatron[]
   partes: PartePatron[]
   abreviaciones: string[]
@@ -58,6 +94,8 @@ export interface Proyecto {
   archivoActivoId: string | null
   modoVueltas: ModoVueltas
   vueltasObjetivo: number
+  /** Solo uno activo debería estar marcado como siguiente. */
+  siguiente?: boolean
 }
 
 export interface Material {

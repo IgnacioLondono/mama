@@ -7,6 +7,8 @@ export const seedPatrones: Patron[] = [
     descripcion:
       'Osito sencillo, de los que salen bien. Se teje en espiral.',
     dificultad: 'facil',
+    categoria: 'Amigurumi',
+    icono: 'wool',
     tiempoEstimado: '6–8 horas',
     archivos: [],
     archivoActivoId: null,
@@ -102,6 +104,8 @@ export const seedPatrones: Patron[] = [
     descripcion:
       'Conejito de orejas largas. Un poquito más de trabajo al coser las piezas.',
     dificultad: 'media',
+    categoria: 'Amigurumi',
+    icono: 'rose',
     tiempoEstimado: '8–10 horas',
     archivos: [],
     archivoActivoId: null,
@@ -183,6 +187,8 @@ export const seedPatrones: Patron[] = [
     descripcion:
       'Pulpo chiquito con tentáculos de cadeneta. Rápido y bonito.',
     dificultad: 'facil',
+    categoria: 'Amigurumi',
+    icono: 'sky',
     tiempoEstimado: '4–5 horas',
     archivos: [],
     archivoActivoId: null,

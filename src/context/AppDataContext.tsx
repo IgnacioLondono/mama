@@ -24,6 +24,8 @@ interface AppDataContextValue {
   updatePatron: (id: string, patch: Partial<Patron>) => Promise<void>
   deletePatron: (id: string) => Promise<void>
   startProyecto: (patronId: string, nombre?: string) => Promise<Proyecto>
+  limpiarProyectosDuplicados: () => Promise<number>
+  marcarSiguiente: (proyectoId: string) => Promise<void>
   updateProyecto: (id: string, patch: Partial<Proyecto>) => Promise<void>
   setVuelta: (proyectoId: string, parteId: string, vuelta: number) => Promise<void>
   setParteActiva: (proyectoId: string, parteId: string) => Promise<void>
@@ -193,12 +195,85 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const startProyecto = useCallback(async (patronId: string, nombre?: string) => {
+    const activos = proyectos.filter(
+      (p) => p.patronId === patronId && p.estado === 'activo',
+    )
+    if (activos.length > 0) {
+      const best = activos.reduce((a, b) => {
+        const score = (p: Proyecto) =>
+          p.progreso.reduce((s, x) => s + (x.vueltaActual || 0), 0)
+        const sa = score(a)
+        const sb = score(b)
+        if (sb !== sa) return sb > sa ? b : a
+        return b.actualizadoEn.localeCompare(a.actualizadoEn) > 0 ? b : a
+      })
+      return best
+    }
     const nuevo = await api.createProyecto(patronId, nombre)
     setProyectos((prev) =>
       prev.some((p) => p.id === nuevo.id) ? prev : [nuevo, ...prev],
     )
     return nuevo
-  }, [])
+  }, [proyectos])
+
+  const limpiarProyectosDuplicados = useCallback(async () => {
+    const activos = proyectos.filter((p) => p.estado === 'activo')
+    const byPatron = new Map<string, Proyecto[]>()
+    for (const p of activos) {
+      const list = byPatron.get(p.patronId) ?? []
+      list.push(p)
+      byPatron.set(p.patronId, list)
+    }
+
+    const aBorrar: string[] = []
+    for (const group of byPatron.values()) {
+      if (group.length < 2) continue
+      const scored = group.map((p) => ({
+        p,
+        score: p.progreso.reduce((s, x) => s + (x.vueltaActual || 0), 0),
+      }))
+      scored.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score
+        return b.p.actualizadoEn.localeCompare(a.p.actualizadoEn)
+      })
+      const keeper = scored[0]
+      for (const item of scored.slice(1)) {
+        if (item.score === 0 || item.score < keeper.score) {
+          aBorrar.push(item.p.id)
+        }
+      }
+    }
+
+    for (const id of aBorrar) {
+      await api.deleteProyecto(id)
+    }
+    if (aBorrar.length) {
+      setProyectos((prev) => prev.filter((p) => !aBorrar.includes(p.id)))
+    }
+    return aBorrar.length
+  }, [proyectos])
+
+  const marcarSiguiente = useCallback(
+    async (proyectoId: string) => {
+      const activos = proyectos.filter((p) => p.estado === 'activo')
+      const updates = activos.filter(
+        (p) => Boolean(p.siguiente) !== (p.id === proyectoId),
+      )
+      setProyectos((prev) =>
+        prev.map((p) =>
+          p.estado === 'activo'
+            ? { ...p, siguiente: p.id === proyectoId }
+            : p,
+        ),
+      )
+      await Promise.all(
+        updates.map((p) =>
+          api.updateProyecto(p.id, { siguiente: p.id === proyectoId }),
+        ),
+      )
+    },
+    [proyectos],
+  )
 
   const updateProyecto = useCallback(async (id: string, patch: Partial<Proyecto>) => {
     const updated = await api.updateProyecto(id, patch)
@@ -372,6 +447,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       updatePatron,
       deletePatron,
       startProyecto,
+      limpiarProyectosDuplicados,
+      marcarSiguiente,
       updateProyecto,
       setVuelta,
       setParteActiva,
@@ -409,6 +486,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       updatePatron,
       deletePatron,
       startProyecto,
+      limpiarProyectosDuplicados,
+      marcarSiguiente,
       updateProyecto,
       setVuelta,
       setParteActiva,

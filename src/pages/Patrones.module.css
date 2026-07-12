@@ -26,51 +26,25 @@
   margin: 0;
 }
 
-.bench {
+.form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: var(--radius-md);
-  background: var(--color-desk);
-  border: 1px solid var(--color-line);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  gap: 0.85rem;
 }
 
-.benchBar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.35rem 0.25rem 0.55rem;
-  border-bottom: 1px dashed rgba(42, 36, 32, 0.18);
-}
-
-.benchBar h2 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.benchActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-}
-
-.benchGrid {
+.formGrid {
   display: grid;
   gap: 0.75rem;
 }
 
 .dropzone {
-  min-height: 14rem;
+  min-height: 12rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  padding: 1.25rem 1rem;
+  padding: 1.1rem 1rem;
   border-radius: var(--radius-md);
   border: 2px dashed rgba(42, 36, 32, 0.22);
   background:
@@ -81,9 +55,11 @@
       rgba(42, 36, 32, 0.02) 10px,
       rgba(42, 36, 32, 0.02) 11px
     ),
-    var(--color-surface-solid);
+    var(--color-surface);
   text-align: center;
-  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  transition:
+    border-color var(--dur) var(--ease),
+    background var(--dur) var(--ease);
 }
 
 .dropOn {
@@ -100,7 +76,7 @@
 .dropTitle {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   color: var(--color-ink);
 }
 
@@ -134,7 +110,7 @@
   gap: 0.5rem;
   padding: 0.55rem 0.7rem;
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  background: var(--color-surface-solid);
   border: 1px solid var(--color-line);
   font-size: 0.88rem;
   font-weight: 600;
@@ -163,10 +139,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  padding: 0.9rem;
-  border-radius: var(--radius-md);
-  background: var(--color-surface-solid);
-  border: 1px solid var(--color-line);
 }
 
 .field {
@@ -193,7 +165,7 @@
 }
 
 .field textarea {
-  min-height: 6.5rem;
+  min-height: 5.5rem;
   resize: vertical;
 }
 
@@ -209,10 +181,68 @@
   gap: 0.55rem;
 }
 
+.iconPicker {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.iconPicker legend {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  margin-bottom: 0.4rem;
+}
+
+.iconGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.iconBtn {
+  width: 2.6rem;
+  height: 2.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  color: #faf6ef;
+  cursor: pointer;
+}
+
+.iconBtnOn {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  padding-top: 0.25rem;
+}
+
+.carpetaForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.carpetaLead {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-ink-soft);
+  font-weight: 600;
+}
+
 .shelfBar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
+  align-items: center;
 }
 
 .search,
@@ -231,6 +261,26 @@
 
 .filter {
   flex: 0 1 auto;
+}
+
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+}
+
+.sort select {
+  min-height: 2.6rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-solid);
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: 650;
 }
 
 .shelf {
@@ -253,22 +303,47 @@
   align-items: center;
 }
 
-.thumbLink {
-  display: block;
-  text-decoration: none;
-}
-
-.noThumb {
-  width: 4.75rem;
-  height: 5.75rem;
-  border-radius: var(--radius-sm);
-  border: 1px dashed var(--color-line);
-  background: rgba(42, 36, 32, 0.03);
-  display: flex;
+.folderThumb {
+  width: 5rem;
+  height: 5rem;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-muted);
-  font-weight: 700;
+  border-radius: var(--radius-md);
+  color: #faf6ef;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: transform 180ms var(--ease);
+}
+
+.folderThumb:hover {
+  transform: translateY(-2px);
+  text-decoration: none;
+  color: #faf6ef;
+}
+
+.folderCoral {
+  background: #c45f48;
+}
+
+.folderSage {
+  background: #5f7d64;
+}
+
+.folderWool {
+  background: #b89a78;
+}
+
+.folderInk {
+  background: #2a2420;
+}
+
+.folderRose {
+  background: #c4788a;
+}
+
+.folderSky {
+  background: #6a8fa8;
 }
 
 .shelfActions {
@@ -284,6 +359,27 @@
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.25rem;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.catBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.55rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: rgba(95, 125, 100, 0.14);
+  color: var(--color-sage-deep);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .itemTitle {
@@ -323,10 +419,9 @@
 }
 
 @media (min-width: 820px) {
-  .benchGrid {
-    grid-template-columns: minmax(0, 1.2fr) minmax(16rem, 0.9fr);
-    align-items: stretch;
-    min-height: 18rem;
+  .formGrid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(16rem, 1fr);
+    align-items: start;
   }
 
   .dropzone {
@@ -344,10 +439,17 @@
 
   .shelfActions {
     grid-column: auto;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folderThumb {
+    transition: none;
   }
 
-  .noThumb {
-    width: 5.5rem;
-    height: 6.75rem;
+  .folderThumb:hover {
+    transform: none;
   }
 }

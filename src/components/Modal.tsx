@@ -9,7 +9,10 @@ interface Props {
   cancelLabel?: string
   danger?: boolean
   busy?: boolean
-  onConfirm: () => void
+  size?: 'md' | 'lg'
+  /** Si false, no muestra botones (el contenido trae su propio pie). */
+  showActions?: boolean
+  onConfirm?: () => void
   onCancel: () => void
 }
 
@@ -21,6 +24,8 @@ export function Modal({
   cancelLabel = 'Cancelar',
   danger = false,
   busy = false,
+  size = 'md',
+  showActions = true,
   onConfirm,
   onCancel,
 }: Props) {
@@ -54,7 +59,7 @@ export function Modal({
   if (!open) return null
 
   function handleConfirm() {
-    if (busy || confirmingRef.current) return
+    if (!onConfirm || busy || confirmingRef.current) return
     confirmingRef.current = true
     onConfirm()
   }
@@ -68,7 +73,7 @@ export function Modal({
       }}
     >
       <div
-        className={styles.dialog}
+        className={`${styles.dialog} ${size === 'lg' ? styles.dialogLg : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -77,25 +82,29 @@ export function Modal({
           {title}
         </h2>
         <div className={styles.body}>{children}</div>
-        <div className={styles.actions}>
-          <button
-            ref={cancelRef}
-            type="button"
-            className="btn btn-secondary"
-            disabled={busy}
-            onClick={onCancel}
-          >
-            {cancelLabel}
-          </button>
-          <button
-            type="button"
-            className={danger ? 'btn btn-danger' : 'btn btn-sage'}
-            disabled={busy}
-            onClick={handleConfirm}
-          >
-            {busy ? 'Un momento…' : confirmLabel}
-          </button>
-        </div>
+        {showActions ? (
+          <div className={styles.actions}>
+            <button
+              ref={cancelRef}
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={onCancel}
+            >
+              {cancelLabel}
+            </button>
+            {onConfirm ? (
+              <button
+                type="button"
+                className={danger ? 'btn btn-danger' : 'btn btn-sage'}
+                disabled={busy}
+                onClick={handleConfirm}
+              >
+                {busy ? 'Un momento…' : confirmLabel}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   )

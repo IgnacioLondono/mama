@@ -124,6 +124,8 @@ async function hydratePatron(raw: Patron): Promise<Patron> {
   const archivos = await listArchivosByPatron(raw.id)
   return {
     ...raw,
+    categoria: raw.categoria ?? 'Otro',
+    icono: raw.icono ?? 'coral',
     archivos,
     archivoActivoId: raw.archivoActivoId ?? archivos[0]?.id ?? null,
   }
@@ -191,6 +193,7 @@ async function hydrateProyecto(raw: Proyecto): Promise<Proyecto> {
     archivoActivoId: raw.archivoActivoId ?? archivos[0]?.id ?? null,
     modoVueltas: raw.modoVueltas ?? 'fijo',
     vueltasObjetivo: raw.vueltasObjetivo ?? 10,
+    siguiente: Boolean(raw.siguiente),
   }
 }
 

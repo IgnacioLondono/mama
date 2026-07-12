@@ -23,6 +23,7 @@ export function PatronDetalle() {
     replaceArchivoPatron,
     renameArchivoPatron,
     deleteArchivoPatron,
+    proyectos,
   } = useAppData()
   const patron = id ? getPatron(id) : undefined
   const [editDesc, setEditDesc] = useState(false)
@@ -30,6 +31,12 @@ export function PatronDetalle() {
   const [editNombre, setEditNombre] = useState(false)
   const [nombreDraft, setNombreDraft] = useState(patron?.nombre ?? '')
   const [starting, setStarting] = useState(false)
+
+  const proyectoActivo = patron
+    ? proyectos.find(
+        (p) => p.patronId === patron.id && p.estado === 'activo',
+      )
+    : undefined
 
   if (!patron) {
     return (
@@ -196,7 +203,11 @@ export function PatronDetalle() {
             disabled={starting}
             onClick={() => void iniciar()}
           >
-            {starting ? 'Abriendo…' : 'Empezar a tejerlo'}
+            {starting
+              ? 'Abriendo…'
+              : proyectoActivo
+                ? 'Seguir tejiendo'
+                : 'Empezar a tejerlo'}
           </button>
         </div>
       </header>

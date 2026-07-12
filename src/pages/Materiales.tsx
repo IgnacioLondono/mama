@@ -67,8 +67,6 @@ export function Materiales() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const bajos = materiales.filter((m) => stockEstado(m) !== 'ok')
-  const agotados = materiales.filter((m) => stockEstado(m) === 'agotado')
-  const tiposUsados = new Set(materiales.map((m) => m.tipo)).size
   const aBorrar = borrarId
     ? materiales.find((m) => m.id === borrarId)
     : undefined
@@ -102,6 +100,14 @@ export function Materiales() {
     if (fotoPreview) URL.revokeObjectURL(fotoPreview)
     setFotoPendiente(null)
     setFotoPreview(null)
+  }
+
+  function closeForm() {
+    setShowForm(false)
+    setEditId(null)
+    setForm(empty)
+    clearFotoLocal()
+    setDragging(false)
   }
 
   function pickFoto(file: File | undefined) {
@@ -142,10 +148,7 @@ export function Materiales() {
       if (id && fotoPendiente) {
         await uploadMaterialImagen(id, fotoPendiente)
       }
-      clearFotoLocal()
-      setForm(empty)
-      setEditId(null)
-      setShowForm(false)
+      closeForm()
     } finally {
       setBusy(false)
     }
@@ -171,7 +174,7 @@ export function Materiales() {
     clearFotoLocal()
     setEditId(null)
     setForm(empty)
-    setShowForm((v) => !v)
+    setShowForm(true)
   }
 
   async function onCardFoto(id: string, e: ChangeEvent<HTMLInputElement>) {
@@ -211,29 +214,8 @@ export function Materiales() {
           className={`btn btn-primary btn-lg ${styles.cta}`}
           onClick={openNew}
         >
-          {showForm && !editId ? 'Cerrar formulario' : 'Agregar ítem'}
+          Agregar ítem
         </button>
-
-        <div className={styles.stats} aria-label="Indicadores">
-          <div className={styles.stat}>
-            <strong>{materiales.length}</strong>
-            <span>Ítems</span>
-          </div>
-          <div
-            className={`${styles.stat} ${bajos.length ? styles.statWarn : ''}`}
-          >
-            <strong>{bajos.length}</strong>
-            <span>Requieren reposición</span>
-          </div>
-          <div className={styles.stat}>
-            <strong>{agotados.length}</strong>
-            <span>Agotados</span>
-          </div>
-          <div className={styles.stat}>
-            <strong>{tiposUsados}</strong>
-            <span>Categorías</span>
-          </div>
-        </div>
       </header>
 
       {bajos.length > 0 && filtro !== 'bajos' ? (
@@ -328,15 +310,20 @@ export function Materiales() {
         </p>
       </Modal>
 
-      {showForm ? (
+      <Modal
+        open={showForm}
+        title={editId ? 'Editar ítem' : 'Nuevo ítem'}
+        size="lg"
+        showActions={false}
+        onCancel={() => {
+          if (!busy) closeForm()
+        }}
+      >
         <form className={styles.form} onSubmit={(e) => void onSubmit(e)}>
-          <div className={styles.formHead}>
-            <h2>{editId ? 'Editar ítem' : 'Nuevo ítem'}</h2>
-            <p>
-              Completá los datos de stock. La foto es opcional y sirve para
-              identificar el material.
-            </p>
-          </div>
+          <p className={styles.formLead}>
+            Completá los datos de stock. La foto es opcional y sirve para
+            identificar el material.
+          </p>
 
           <div
             className={`${styles.drop} ${dragging ? styles.dropOn : ''}`}
@@ -472,24 +459,20 @@ export function Materiales() {
             </div>
           </div>
           <div className={styles.formActions}>
-            <button type="submit" className="btn btn-sage" disabled={busy}>
-              {busy ? 'Guardando…' : editId ? 'Guardar cambios' : 'Registrar ítem'}
-            </button>
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => {
-                setShowForm(false)
-                setEditId(null)
-                setForm(empty)
-                clearFotoLocal()
-              }}
+              disabled={busy}
+              onClick={closeForm}
             >
               Cancelar
             </button>
+            <button type="submit" className="btn btn-sage" disabled={busy}>
+              {busy ? 'Guardando…' : editId ? 'Guardar cambios' : 'Registrar ítem'}
+            </button>
           </div>
         </form>
-      ) : null}
+      </Modal>
 
       {materiales.length === 0 ? (
         <div className={styles.empty}>

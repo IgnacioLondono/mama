@@ -12,12 +12,19 @@
 
 .dialog {
   width: min(100%, 22rem);
+  max-height: min(90dvh, 40rem);
+  overflow: auto;
   padding: 1.15rem 1.15rem 1rem;
   border-radius: var(--radius-md);
   background: var(--color-surface-solid);
   border: 1px solid var(--color-line);
   box-shadow: var(--shadow-soft);
   animation: rise 180ms var(--ease);
+}
+
+.dialogLg {
+  width: min(100%, 38rem);
+  max-height: min(92dvh, 52rem);
 }
 
 .title {

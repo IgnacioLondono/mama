@@ -13,12 +13,20 @@ export function Proyectos() {
     progresoPorcentaje,
     deleteProyecto,
     completarProyecto,
+    marcarSiguiente,
   } = useAppData()
   const [finId, setFinId] = useState<string | null>(null)
   const [borrarId, setBorrarId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const activos = proyectos.filter((p) => p.estado === 'activo')
+  const activos = proyectos
+    .filter((p) => p.estado === 'activo')
+    .sort((a, b) => {
+      if (Boolean(a.siguiente) !== Boolean(b.siguiente)) {
+        return a.siguiente ? -1 : 1
+      }
+      return b.actualizadoEn.localeCompare(a.actualizadoEn)
+    })
   const terminados = proyectos.filter((p) => p.estado === 'terminado')
   const aTerminar = finId ? proyectos.find((p) => p.id === finId) : undefined
   const aBorrar = borrarId
@@ -145,9 +153,14 @@ export function Proyectos() {
                         </Link>
                         <p className={styles.sub}>
                           {patron?.nombre ?? 'Patrón borrado'}
+                          {p.siguiente ? ' · Siguiente' : ''}
                         </p>
                       </div>
-                      <span className="badge badge-activo">A medias</span>
+                      {p.siguiente ? (
+                        <span className="badge badge-activo">Siguiente</span>
+                      ) : (
+                        <span className="badge badge-activo">A medias</span>
+                      )}
                     </div>
                     <ProgresoBar value={pct} />
                     <div className={styles.actions}>
@@ -157,6 +170,15 @@ export function Proyectos() {
                       >
                         Seguir
                       </Link>
+                      {!p.siguiente ? (
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => void marcarSiguiente(p.id)}
+                        >
+                          Marcar siguiente
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className="btn btn-sage"
