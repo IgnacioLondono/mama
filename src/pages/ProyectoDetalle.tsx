@@ -39,7 +39,7 @@ export function ProyectoDetalle() {
   const patron = proyecto ? getPatron(proyecto.patronId) : undefined
   const session = id ? loadMesaSession(id) : null
   const [notas, setNotas] = useState(proyecto?.notas ?? '')
-  const [panel, setPanel] = useState<Panel>(session?.panel ?? 'pasos')
+  const [panel, setPanel] = useState<Panel>(session?.panel ?? null)
   const [confirmFin, setConfirmFin] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [editNombre, setEditNombre] = useState(false)
@@ -50,7 +50,7 @@ export function ProyectoDetalle() {
   useEffect(() => {
     if (!id) return
     const s = loadMesaSession(id)
-    setPanel(s.panel ?? 'pasos')
+    setPanel(s.panel ?? null)
   }, [id])
 
   useEffect(() => {
@@ -218,6 +218,29 @@ export function ProyectoDetalle() {
           </p>
         </div>
         <div className={styles.toolbarActions}>
+          <div className={styles.extraMenu} role="group" aria-label="Más del proyecto">
+            <button
+              type="button"
+              className={panel === 'pasos' ? styles.extraOn : styles.extraBtn}
+              onClick={() => togglePanel('pasos')}
+            >
+              Pasos
+            </button>
+            <button
+              type="button"
+              className={panel === 'partes' ? styles.extraOn : styles.extraBtn}
+              onClick={() => togglePanel('partes')}
+            >
+              Partes
+            </button>
+            <button
+              type="button"
+              className={panel === 'apuntes' ? styles.extraOn : styles.extraBtn}
+              onClick={() => togglePanel('apuntes')}
+            >
+              Apuntes
+            </button>
+          </div>
           <button
             type="button"
             className={`btn btn-secondary ${guardadoOk ? styles.saveOk : ''}`}
@@ -309,95 +332,80 @@ export function ProyectoDetalle() {
         </div>
       </div>
 
-      <div className={styles.drawer}>
-        <div className={styles.drawerTabs} role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={panel === 'pasos'}
-            className={panel === 'pasos' ? styles.tabOn : styles.tab}
-            onClick={() => togglePanel('pasos')}
-          >
-            Pasos
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={panel === 'partes'}
-            className={panel === 'partes' ? styles.tabOn : styles.tab}
-            onClick={() => togglePanel('partes')}
-          >
-            Partes
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={panel === 'apuntes'}
-            className={panel === 'apuntes' ? styles.tabOn : styles.tab}
-            onClick={() => togglePanel('apuntes')}
-          >
-            Apuntes
-          </button>
+      {panel ? (
+        <div className={styles.sheet} role="dialog" aria-label={panel}>
+          <div className={styles.sheetHead}>
+            <strong>
+              {panel === 'pasos'
+                ? 'Pasos'
+                : panel === 'partes'
+                  ? 'Partes'
+                  : 'Apuntes'}
+            </strong>
+            <button
+              type="button"
+              className={styles.sheetClose}
+              onClick={() => setPanel(null)}
+              aria-label="Cerrar"
+            >
+              ×
+            </button>
+          </div>
+          <div className={styles.sheetBody}>
+            {panel === 'pasos' ? (
+              <ol>
+                {parteActiva.instrucciones.map((ins) => (
+                  <li key={ins}>{ins}</li>
+                ))}
+              </ol>
+            ) : null}
+
+            {panel === 'partes' ? (
+              <div className={styles.parteList}>
+                {patron.partes.map((parte) => {
+                  const prog =
+                    proyecto.progreso.find((p) => p.parteId === parte.id)
+                      ?.vueltaActual ?? 0
+                  const active = parte.id === parteActiva.id
+                  const denom =
+                    active && proyecto.modoVueltas === 'fijo'
+                      ? proyecto.vueltasObjetivo
+                      : parte.vueltasTotales
+                  return (
+                    <button
+                      key={parte.id}
+                      type="button"
+                      className={`${styles.parteBtn} ${active ? styles.parteActive : ''}`}
+                      onClick={() => void setParteActiva(proyecto.id, parte.id)}
+                    >
+                      <span>{parte.nombre}</span>
+                      <span className={styles.parteProg}>
+                        {proyecto.modoVueltas === 'ilimitado' && active
+                          ? `${prog}`
+                          : `${prog}/${denom}`}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+
+            {panel === 'apuntes' ? (
+              <textarea
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                onBlur={() => {
+                  if (notas !== proyecto.notas) {
+                    void updateProyecto(proyecto.id, { notas })
+                  }
+                }}
+                placeholder="Colores, cambios, lo que quieras recordar…"
+                aria-label="Apuntes"
+              />
+            ) : null}
+          </div>
         </div>
-
-        {panel === 'pasos' ? (
-          <div className={styles.drawerBody}>
-            <ol>
-              {parteActiva.instrucciones.map((ins) => (
-                <li key={ins}>{ins}</li>
-              ))}
-            </ol>
-          </div>
-        ) : null}
-
-        {panel === 'partes' ? (
-          <div className={styles.drawerBody}>
-            <div className={styles.parteList}>
-              {patron.partes.map((parte) => {
-                const prog =
-                  proyecto.progreso.find((p) => p.parteId === parte.id)
-                    ?.vueltaActual ?? 0
-                const active = parte.id === parteActiva.id
-                const denom =
-                  active && proyecto.modoVueltas === 'fijo'
-                    ? proyecto.vueltasObjetivo
-                    : parte.vueltasTotales
-                return (
-                  <button
-                    key={parte.id}
-                    type="button"
-                    className={`${styles.parteBtn} ${active ? styles.parteActive : ''}`}
-                    onClick={() => void setParteActiva(proyecto.id, parte.id)}
-                  >
-                    <span>{parte.nombre}</span>
-                    <span className={styles.parteProg}>
-                      {proyecto.modoVueltas === 'ilimitado' && active
-                        ? `${prog}`
-                        : `${prog}/${denom}`}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        ) : null}
-
-        {panel === 'apuntes' ? (
-          <div className={styles.drawerBody}>
-            <textarea
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              onBlur={() => {
-                if (notas !== proyecto.notas) {
-                  void updateProyecto(proyecto.id, { notas })
-                }
-              }}
-              placeholder="Colores, cambios, lo que quieras recordar…"
-              aria-label="Apuntes"
-            />
-          </div>
-        ) : null}
-      </div>
+      ) : null}
 
       <IaBurbuja
         proyectoId={proyecto.id}

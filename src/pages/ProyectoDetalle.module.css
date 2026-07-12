@@ -10,7 +10,7 @@
 
 .toolbar {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 0.55rem;
   padding: 0.2rem 0.45rem;
@@ -120,6 +120,31 @@
   color: var(--color-sage-deep) !important;
 }
 
+.extraMenu {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.extraBtn,
+.extraOn {
+  min-height: 1.75rem;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-soft);
+  font-weight: 700;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.extraOn {
+  border-color: var(--color-coral);
+  background: rgba(196, 95, 72, 0.12);
+  color: var(--color-coral-deep);
+}
+
 .doneChip {
   display: inline-flex;
   align-items: center;
@@ -172,72 +197,76 @@
   flex-shrink: 0;
 }
 
-.drawer {
-  border-top: 1px solid var(--color-line);
-  background: var(--color-surface-solid);
-  flex-shrink: 0;
-  max-height: 28%;
+.sheet {
+  position: fixed;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 35;
+  max-height: min(42dvh, 20rem);
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  background: var(--color-surface-solid);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
 }
 
-.drawerTabs {
+.sheetHead {
   display: flex;
-  gap: 0.1rem;
-  padding: 0.15rem 0.35rem 0;
-  overflow-x: auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  border-bottom: 1px solid var(--color-line);
   flex-shrink: 0;
 }
 
-.tab,
-.tabOn {
-  min-height: 1.75rem;
-  padding: 0.15rem 0.55rem;
-  border: 1px solid transparent;
-  border-bottom: none;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+.sheetHead strong {
+  font-size: 0.85rem;
+}
+
+.sheetClose {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-ink-soft);
-  font-weight: 700;
-  font-size: 0.75rem;
-}
-
-.tabOn {
-  background: var(--color-surface);
-  border-color: var(--color-line);
   color: var(--color-ink);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.drawerBody {
-  padding: 0.4rem 0.55rem;
-  border-top: 1px solid var(--color-line);
+.sheetBody {
+  padding: 0.45rem 0.55rem;
   overflow: auto;
-  background: var(--color-surface);
   min-height: 0;
   flex: 1;
 }
 
-.drawerBody ol {
+.sheetBody ol {
   margin: 0;
   padding-left: 1rem;
   color: var(--color-ink-soft);
   font-size: 0.85rem;
 }
 
-.drawerBody li {
+.sheetBody li {
   margin-bottom: 0.15rem;
 }
 
-.drawerBody textarea {
+.sheetBody textarea {
   width: 100%;
-  min-height: 3.5rem;
-  max-height: 6rem;
+  min-height: 6rem;
   padding: 0.4rem;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-sm);
-  background: var(--color-surface-solid);
+  background: var(--color-surface);
+  color: var(--color-ink);
   resize: vertical;
+  font: inherit;
 }
 
 .parteList {
@@ -256,7 +285,7 @@
   padding: 0.3rem 0.55rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-line);
-  background: var(--color-surface-solid);
+  background: var(--color-surface);
   color: var(--color-ink);
   font-weight: 600;
   text-align: left;
@@ -279,6 +308,13 @@
   .stage {
     grid-template-columns: minmax(0, 1.9fr) minmax(12.5rem, 14.5rem);
   }
+
+  .sheet {
+    left: auto;
+    right: 4.5rem;
+    width: min(22rem, calc(100vw - 5rem));
+    bottom: 4.5rem;
+  }
 }
 
 @media (max-width: 959px) {
@@ -294,7 +330,7 @@
     justify-content: flex-start;
   }
 
-  .drawer {
-    max-height: 26%;
+  .sheet {
+    bottom: 4.25rem;
   }
 }
