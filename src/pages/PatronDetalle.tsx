@@ -65,8 +65,10 @@ export function PatronDetalle() {
         ← Patrones
       </Link>
 
-      <header className={styles.header}>
-        <div className={styles.titleRow}>
+      <header className={styles.hero}>
+        <p className={styles.kicker}>Patrón</p>
+
+        <div className={styles.heroTop}>
           {editNombre ? (
             <div className={styles.nameEdit}>
               <input
@@ -104,30 +106,47 @@ export function PatronDetalle() {
               </button>
             </div>
           ) : (
-            <>
+            <div className={styles.titleBlock}>
               <h1>{patron.nombre}</h1>
               <button
                 type="button"
-                className="btn btn-ghost"
+                className={styles.linkEdit}
                 onClick={() => {
                   setNombreDraft(patron.nombre)
                   setEditNombre(true)
                 }}
               >
-                Editar nombre
+                Renombrar
               </button>
-            </>
+            </div>
           )}
+        </div>
+
+        <div className={styles.metaRow}>
           <span className={`badge badge-${patron.dificultad}`}>
             {labels[patron.dificultad]}
           </span>
+          <span className={styles.metaDot} aria-hidden>
+            ·
+          </span>
+          <span className={styles.metaTime}>{patron.tiempoEstimado}</span>
+          <span className={styles.metaDot} aria-hidden>
+            ·
+          </span>
+          <span className={styles.metaTime}>
+            {patron.partes.length}{' '}
+            {patron.partes.length === 1 ? 'parte' : 'partes'}
+          </span>
         </div>
-        <p className={styles.meta}>{patron.tiempoEstimado}</p>
 
         {editDesc ? (
           <div className={styles.editBox}>
-            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} />
-            <div className="row-actions">
+            <textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              aria-label="Descripción"
+            />
+            <div className={styles.editActions}>
               <button
                 type="button"
                 className="btn btn-sage"
@@ -148,97 +167,126 @@ export function PatronDetalle() {
             </div>
           </div>
         ) : (
-          <>
-            <p>{patron.descripcion}</p>
+          <div className={styles.descBlock}>
+            <p className={styles.desc}>{patron.descripcion}</p>
             <button
               type="button"
-              className="btn btn-ghost"
+              className={styles.linkEdit}
               onClick={() => {
                 setDesc(patron.descripcion)
                 setEditDesc(true)
               }}
             >
-              Cambiar nota
+              Editar nota
             </button>
-          </>
+          </div>
         )}
+
+        <div className={styles.cta}>
+          <button
+            type="button"
+            className={`btn btn-primary btn-lg ${styles.ctaBtn}`}
+            onClick={() => void iniciar()}
+          >
+            Empezar a tejerlo
+          </button>
+        </div>
       </header>
 
-      <div className={styles.cta}>
-        <button
-          type="button"
-          className="btn btn-primary btn-lg"
-          onClick={() => void iniciar()}
-        >
-          Empezar a tejerlo
-        </button>
-      </div>
+      <div className={styles.layout}>
+        <div className={styles.mainCol}>
+          <section className={styles.viewerBlock} aria-label="Archivo del patrón">
+            <div className={styles.sectionHead}>
+              <h2>Archivo</h2>
+              <p>PDF o foto del patrón para consultarlo mientras tejés.</p>
+            </div>
+            <div className={styles.viewerFrame}>
+              <VisorArchivos
+                proyectoId={patron.id}
+                archivos={patron.archivos ?? []}
+                activoId={patron.archivoActivoId ?? null}
+                onSelect={(archivoActivoId) =>
+                  void updatePatron(patron.id, { archivoActivoId })
+                }
+                onUpload={(file) => uploadArchivoPatron(patron.id, file)}
+                onReplace={(archivoId, file) =>
+                  replaceArchivoPatron(patron.id, archivoId, file)
+                }
+                onRename={(archivoId, nombre) =>
+                  renameArchivoPatron(patron.id, archivoId, nombre)
+                }
+                onDelete={(archivoId) => deleteArchivoPatron(patron.id, archivoId)}
+              />
+            </div>
+          </section>
 
-      <VisorArchivos
-        proyectoId={patron.id}
-        archivos={patron.archivos ?? []}
-        activoId={patron.archivoActivoId ?? null}
-        onSelect={(archivoActivoId) =>
-          void updatePatron(patron.id, { archivoActivoId })
-        }
-        onUpload={(file) => uploadArchivoPatron(patron.id, file)}
-        onReplace={(archivoId, file) =>
-          replaceArchivoPatron(patron.id, archivoId, file)
-        }
-        onRename={(archivoId, nombre) =>
-          renameArchivoPatron(patron.id, archivoId, nombre)
-        }
-        onDelete={(archivoId) => deleteArchivoPatron(patron.id, archivoId)}
-      />
-
-      <section className={`panel ${styles.iaPanel}`}>
-        <AsistenteIa
-          patronId={patron.id}
-          archivoId={patron.archivoActivoId}
-        />
-      </section>
-
-      <section className="panel">
-        <h2>Qué necesitas</h2>
-        {patron.materiales.length === 0 ? (
-          <p className={styles.muted}>Todavía no anotaste materiales.</p>
-        ) : (
-          <ul className={styles.plainList}>
-            {patron.materiales.map((m) => (
-              <li key={m.nombre}>
-                <strong>{m.nombre}</strong>
-                <span>{m.cantidad}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="panel">
-        <h2>Abreviaciones</h2>
-        <ul className={styles.abbr}>
-          {patron.abreviaciones.map((a) => (
-            <li key={a}>{a}</li>
-          ))}
-        </ul>
-      </section>
-
-      <section className={styles.partes}>
-        <h2>Partes</h2>
-        {patron.partes.map((parte, i) => (
-          <article key={parte.id} className={`panel ${styles.parte}`}>
-            <h3>
-              {i + 1}. {parte.nombre}
-            </h3>
-            <p className={styles.vueltas}>{parte.vueltasTotales} vueltas</p>
-            <ol className={styles.steps}>
-              {parte.instrucciones.map((ins) => (
-                <li key={ins}>{ins}</li>
+          <section className={styles.partes} aria-label="Partes del patrón">
+            <div className={styles.sectionHead}>
+              <h2>Partes</h2>
+              <p>Pasos anotados para seguir el amigurumi.</p>
+            </div>
+            <div className={styles.parteList}>
+              {patron.partes.map((parte, i) => (
+                <article key={parte.id} className={styles.parte}>
+                  <div className={styles.parteHead}>
+                    <span className={styles.parteNum}>{i + 1}</span>
+                    <div>
+                      <h3>{parte.nombre}</h3>
+                      <p className={styles.vueltas}>
+                        {parte.vueltasTotales} vueltas
+                      </p>
+                    </div>
+                  </div>
+                  <ol className={styles.steps}>
+                    {parte.instrucciones.map((ins) => (
+                      <li key={ins}>{ins}</li>
+                    ))}
+                  </ol>
+                </article>
               ))}
-            </ol>
-          </article>
-        ))}
-      </section>
+            </div>
+          </section>
+        </div>
+
+        <aside className={styles.aside}>
+          <section className={styles.sideBlock}>
+            <h2>Qué necesitas</h2>
+            {patron.materiales.length === 0 ? (
+              <p className={styles.muted}>Todavía no anotaste materiales.</p>
+            ) : (
+              <ul className={styles.plainList}>
+                {patron.materiales.map((m) => (
+                  <li key={m.nombre}>
+                    <strong>{m.nombre}</strong>
+                    <span>{m.cantidad}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className={styles.sideBlock}>
+            <h2>Abreviaciones</h2>
+            {patron.abreviaciones.length === 0 ? (
+              <p className={styles.muted}>Sin abreviaciones anotadas.</p>
+            ) : (
+              <ul className={styles.abbr}>
+                {patron.abreviaciones.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className={`${styles.sideBlock} ${styles.iaBlock}`}>
+            <h2>Ayuda</h2>
+            <AsistenteIa
+              patronId={patron.id}
+              archivoId={patron.archivoActivoId}
+            />
+          </section>
+        </aside>
+      </div>
     </div>
   )
 }
