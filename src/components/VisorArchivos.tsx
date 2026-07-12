@@ -2,6 +2,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { api } from '../lib/api'
 import type { ArchivoMeta } from '../types'
 import { Modal } from './Modal'
+import { PdfVisor } from './PdfVisor'
 import styles from './VisorArchivos.module.css'
 
 const ACCEPT =
@@ -214,7 +215,7 @@ export function VisorArchivos({
             vueltas.
           </p>
         ) : esPdf ? (
-          <iframe title={activo.nombre} src={url} className={styles.frame} />
+          <PdfVisor key={activo.id + activo.subidoEn} url={url} titulo={activo.nombre} />
         ) : esImagen ? (
           <div className={styles.imgWrap}>
             <img src={url} alt={activo.nombre} className={styles.img} />
