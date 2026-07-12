@@ -15,7 +15,6 @@ export function IaBurbuja({ proyectoId, patronId, archivoId }: Props) {
   const titleId = useId()
   const closeRef = useRef<HTMLButtonElement>(null)
 
-  // Precarga PDF + mantiene el modelo listo aunque el chat esté cerrado
   useEffect(() => {
     void api
       .iaPrecargar({
@@ -38,34 +37,36 @@ export function IaBurbuja({ proyectoId, patronId, archivoId }: Props) {
 
   return (
     <div className={styles.root}>
-      {open ? (
-        <div
-          className={styles.panel}
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby={titleId}
-        >
-          <div className={styles.panelHead}>
-            <h2 id={titleId}>Ayuda</h2>
-            <button
-              ref={closeRef}
-              type="button"
-              className={styles.close}
-              onClick={() => setOpen(false)}
-              aria-label="Cerrar ayuda"
-            >
-              ×
-            </button>
-          </div>
-          <div className={styles.panelBody}>
-            <AsistenteIa
-              proyectoId={proyectoId}
-              patronId={patronId}
-              archivoId={archivoId}
-            />
-          </div>
+      {/* Se mantiene montado para no perder el chat al cerrar */}
+      <div
+        className={`${styles.panel} ${open ? '' : styles.panelHidden}`}
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby={titleId}
+        aria-hidden={!open}
+        hidden={!open}
+      >
+        <div className={styles.panelHead}>
+          <h2 id={titleId}>Ayuda</h2>
+          <button
+            ref={closeRef}
+            type="button"
+            className={styles.close}
+            onClick={() => setOpen(false)}
+            aria-label="Cerrar ayuda"
+            tabIndex={open ? 0 : -1}
+          >
+            ×
+          </button>
         </div>
-      ) : null}
+        <div className={styles.panelBody}>
+          <AsistenteIa
+            proyectoId={proyectoId}
+            patronId={patronId}
+            archivoId={archivoId}
+          />
+        </div>
+      </div>
 
       <button
         type="button"

@@ -46,6 +46,10 @@
   overflow: hidden;
 }
 
+.panelHidden {
+  display: none;
+}
+
 .panelHead {
   display: flex;
   align-items: center;

@@ -1,17 +1,17 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { api } from '../lib/api'
+import {
+  iaChatScope,
+  loadIaChat,
+  saveIaChat,
+  type IaChatMsg,
+} from '../lib/iaChatSession'
 import styles from './AsistenteIa.module.css'
 
 interface Props {
   proyectoId?: string
   patronId?: string
   archivoId?: string | null
-}
-
-type Msg = {
-  id: string
-  rol: 'yo' | 'bot' | 'aviso' | 'error'
-  texto: string
 }
 
 const SUGERENCIAS = [
@@ -26,20 +26,31 @@ function uid() {
 }
 
 export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
+  const scope = useMemo(
+    () => iaChatScope({ proyectoId, patronId }),
+    [proyectoId, patronId],
+  )
   const [ok, setOk] = useState<boolean | null>(null)
   const [proveedor, setProveedor] = useState('')
   const [pregunta, setPregunta] = useState('')
-  const [msgs, setMsgs] = useState<Msg[]>([
-    {
-      id: 'hola',
-      rol: 'bot',
-      texto:
-        'Hola. Puedo mirar el patrón y el PDF y darte tips claros. ¿Qué necesitas?',
-    },
-  ])
+  const [msgs, setMsgs] = useState<IaChatMsg[]>(() => loadIaChat(scope))
   const [loading, setLoading] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const skipFirstSave = useRef(true)
+
+  useEffect(() => {
+    setMsgs(loadIaChat(scope))
+    skipFirstSave.current = true
+  }, [scope])
+
+  useEffect(() => {
+    if (skipFirstSave.current) {
+      skipFirstSave.current = false
+      return
+    }
+    saveIaChat(scope, msgs)
+  }, [scope, msgs])
 
   useEffect(() => {
     void api

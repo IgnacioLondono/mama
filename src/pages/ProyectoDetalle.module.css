@@ -104,12 +104,20 @@
 .toolbarActions {
   margin-left: auto;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .toolbarActions .btn {
   min-height: 1.9rem;
   padding: 0.2rem 0.65rem;
   font-size: 0.8rem;
+}
+
+.saveOk {
+  border-color: var(--color-sage) !important;
+  color: var(--color-sage-deep) !important;
 }
 
 .doneChip {

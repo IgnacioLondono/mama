@@ -6,8 +6,10 @@ import { Modal } from '../components/Modal'
 import { ProgresoBar } from '../components/ProgresoBar'
 import { VisorArchivos } from '../components/VisorArchivos'
 import { useAppData } from '../context/AppDataContext'
+import { iaChatScope, loadIaChat, saveIaChat } from '../lib/iaChatSession'
 import {
   loadMesaSession,
+  saveMesaProgreso,
   saveMesaSession,
   type MesaPanel,
 } from '../lib/mesaSession'
@@ -42,6 +44,8 @@ export function ProyectoDetalle() {
   const [finishing, setFinishing] = useState(false)
   const [editNombre, setEditNombre] = useState(false)
   const [nombreDraft, setNombreDraft] = useState(proyecto?.nombre ?? '')
+  const [guardando, setGuardando] = useState(false)
+  const [guardadoOk, setGuardadoOk] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -85,6 +89,23 @@ export function ProyectoDetalle() {
   const tieneSiguiente =
     !!patron && parteIndex >= 0 && parteIndex < patron.partes.length - 1
 
+  function siguienteParte() {
+    if (!patron || !tieneSiguiente) return
+    const next = patron.partes[parteIndex + 1]
+    if (next) void setParteActiva(proyecto!.id, next.id)
+  }
+
+  const objetivo =
+    proyecto && parteActiva
+      ? proyecto.modoVueltas === 'fijo'
+        ? proyecto.vueltasObjetivo
+        : parteActiva.vueltasTotales
+      : 0
+
+  function togglePanel(next: Panel) {
+    setPanel((cur) => (cur === next ? null : next))
+  }
+
   if (!proyecto || !patron || !parteActiva) {
     return (
       <div className="page-enter empty">
@@ -96,19 +117,33 @@ export function ProyectoDetalle() {
     )
   }
 
-  function siguienteParte() {
-    if (!patron || !tieneSiguiente) return
-    const next = patron.partes[parteIndex + 1]
-    if (next) void setParteActiva(proyecto!.id, next.id)
-  }
+  const proy = proyecto
+  const pat = patron
 
-  const objetivo =
-    proyecto.modoVueltas === 'fijo'
-      ? proyecto.vueltasObjetivo
-      : parteActiva.vueltasTotales
-
-  function togglePanel(next: Panel) {
-    setPanel((cur) => (cur === next ? null : next))
+  async function guardarProyecto() {
+    if (guardando) return
+    setGuardando(true)
+    setGuardadoOk(false)
+    try {
+      await updateProyecto(proy.id, { notas })
+      saveMesaProgreso(proy.id, {
+        progreso: proy.progreso,
+        parteActivaId: proy.parteActivaId,
+        modoVueltas: proy.modoVueltas,
+        vueltasObjetivo: proy.vueltasObjetivo,
+        archivoActivoId: proy.archivoActivoId,
+      })
+      saveMesaSession(proy.id, { panel })
+      const scope = iaChatScope({
+        proyectoId: proy.id,
+        patronId: pat.id,
+      })
+      saveIaChat(scope, loadIaChat(scope))
+      setGuardadoOk(true)
+      window.setTimeout(() => setGuardadoOk(false), 1800)
+    } finally {
+      setGuardando(false)
+    }
   }
 
   return (
@@ -183,6 +218,14 @@ export function ProyectoDetalle() {
           </p>
         </div>
         <div className={styles.toolbarActions}>
+          <button
+            type="button"
+            className={`btn btn-secondary ${guardadoOk ? styles.saveOk : ''}`}
+            onClick={() => void guardarProyecto()}
+            disabled={guardando}
+          >
+            {guardando ? 'Guardando…' : guardadoOk ? 'Guardado' : 'Guardar'}
+          </button>
           {proyecto.estado === 'activo' ? (
             <button
               type="button"
