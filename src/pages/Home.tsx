@@ -96,8 +96,8 @@ export function Home() {
             <IconYarn />
           </span>
           <span className={styles.toolText}>
-            <strong>Lana</strong>
-            <span>Lo que hay en casa</span>
+            <strong>Inventario</strong>
+            <span>Stock y materiales</span>
           </span>
         </Link>
         <Link to="/proyectos" className={styles.tool}>

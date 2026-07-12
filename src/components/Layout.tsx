@@ -14,7 +14,7 @@ const links = [
   { to: '/', label: 'Mesa', end: true, Icon: IconDesk },
   { to: '/proyectos', label: 'Tejiendo', Icon: IconNeedles },
   { to: '/patrones', label: 'Patrones', Icon: IconBook },
-  { to: '/materiales', label: 'Lana', Icon: IconYarn },
+  { to: '/materiales', label: 'Inventario', Icon: IconYarn },
 ]
 
 export function Layout() {
