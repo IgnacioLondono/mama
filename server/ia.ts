@@ -8,9 +8,12 @@ import {
   uploadsDir,
 } from './db.ts'
 
-const SYSTEM = `Ayudante de crochet/amigurumi. Español, clara y breve (máx. 8 oraciones o lista corta).
-Usa SOLO el texto del archivo/patrón que te pasen. Si pide una vuelta o parte, cita lo que diga el PDF.
-Explica abreviaciones (pb, aum, dis, an…). No inventes vueltas. Si el PDF viene vacío o es escaneado, dilo y da tips generales.`
+const SYSTEM = `Ayudante de crochet/amigurumi y conversación cercana. Español, clara y breve (máx. 8 oraciones o lista corta).
+Si te pasan texto de PDF/patrón, úsalo. Si no, responde normal (tips generales, charla, dudas) sin inventar vueltas de un PDF.
+Explica abreviaciones (pb, aum, dis, an…). No inventes vueltas exactas de un patrón concreto si no las tienes.`
+
+const SYSTEM_CHAT = `Ayudante de crochet amigable. Español, frases cortas.
+Charla normal: tips generales, ánimo, dudas de tejido. No digas que leíste un PDF. No inventes vueltas de un patrón concreto.`
 
 type CacheEntry = {
   key: string
@@ -331,7 +334,10 @@ function acortar(texto: string, max: number): string {
   return `${texto.slice(0, max)}\n…(recortado)`
 }
 
-async function llamarOpenAI(userContent: string): Promise<string> {
+async function llamarOpenAI(
+  userContent: string,
+  system = SYSTEM,
+): Promise<string> {
   const key = process.env.OPENAI_API_KEY!.trim()
   const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini'
   const base =
@@ -349,7 +355,7 @@ async function llamarOpenAI(userContent: string): Promise<string> {
       temperature: 0.3,
       max_tokens: 450,
       messages: [
-        { role: 'system', content: SYSTEM },
+        { role: 'system', content: system },
         { role: 'user', content: userContent },
       ],
     }),
@@ -366,7 +372,10 @@ async function llamarOpenAI(userContent: string): Promise<string> {
   return data.choices?.[0]?.message?.content?.trim() || 'No hubo respuesta.'
 }
 
-async function llamarOllama(userContent: string): Promise<string> {
+async function llamarOllama(
+  userContent: string,
+  system = SYSTEM,
+): Promise<string> {
   const base = process.env.OLLAMA_BASE_URL!.trim().replace(/\/$/, '')
   const model = process.env.OLLAMA_MODEL?.trim() || 'llama3.2'
   const numPredict = Number(process.env.OLLAMA_NUM_PREDICT || 220)
@@ -384,11 +393,10 @@ async function llamarOllama(userContent: string): Promise<string> {
         num_predict: numPredict,
         temperature: 0.35,
         top_p: 0.9,
-        // Menos “pensar” innecesario en CPU
         num_thread: Number(process.env.OLLAMA_NUM_THREAD || 0) || undefined,
       },
       messages: [
-        { role: 'system', content: SYSTEM },
+        { role: 'system', content: system },
         { role: 'user', content: userContent },
       ],
     }),
@@ -441,6 +449,8 @@ export async function pedirAyudaIa(opts: {
   archivoId?: string
   patronId?: string
   proyectoId?: string
+  /** Si es false, charla normal sin leer PDF (más rápido). */
+  usarPdf?: boolean
 }): Promise<{
   respuesta: string
   aviso?: string
@@ -453,32 +463,64 @@ export async function pedirAyudaIa(opts: {
     )
   }
 
+  const usarPdf = opts.usarPdf === true
   const pregunta =
     opts.pregunta?.trim() ||
-    'Lee el archivo y dame 4 tips prácticos para tejer sin perder vueltas.'
+    (usarPdf
+      ? 'Lee el archivo y dame 4 tips prácticos para tejer sin perder vueltas.'
+      : 'Dame un tip rápido de crochet para hoy.')
 
-  let { textoPdf, resumenPatron, aviso, archivosLeidos } = await cargarContexto({
-    ...opts,
-    pregunta,
-  })
+  let textoPdf = ''
+  let resumenPatron = ''
+  let aviso = ''
+  let archivosLeidos: string[] = []
+
+  if (usarPdf) {
+    const ctx = await cargarContexto({
+      archivoId: opts.archivoId,
+      patronId: opts.patronId,
+      proyectoId: opts.proyectoId,
+      pregunta,
+    })
+    textoPdf = ctx.textoPdf
+    resumenPatron = ctx.resumenPatron
+    aviso = ctx.aviso
+    archivosLeidos = ctx.archivosLeidos
+  } else if (opts.proyectoId || opts.patronId) {
+    // Contexto mínimo, sin tocar archivos
+    if (opts.proyectoId) {
+      const proy = await getProyecto(opts.proyectoId)
+      if (proy) {
+        resumenPatron = `Proyecto: ${proy.nombre}. Parte: ${proy.parteActivaId}.`
+      }
+    } else if (opts.patronId) {
+      const patron = await getPatron(opts.patronId)
+      if (patron) {
+        resumenPatron = `Patrón: ${patron.nombre}.`
+      }
+    }
+  }
 
   const proveedor = iaProveedor()
   if (proveedor === 'ollama') {
-    resumenPatron = acortar(resumenPatron, 1200)
-    // textoPdf ya viene fragmentado; tope de seguridad
-    textoPdf = acortar(textoPdf, Number(process.env.OLLAMA_PDF_CHARS || 4500))
+    resumenPatron = acortar(resumenPatron, usarPdf ? 1200 : 400)
+    if (usarPdf) {
+      textoPdf = acortar(textoPdf, Number(process.env.OLLAMA_PDF_CHARS || 4500))
+    }
   }
 
-  const leidos =
-    archivosLeidos.length > 0
-      ? `Archivos leídos: ${archivosLeidos.join(', ')}.`
-      : 'Sin texto de archivo; solo cuaderno.'
-
+  const system = usarPdf ? SYSTEM : SYSTEM_CHAT
   const userContent = [
-    leidos,
-    resumenPatron && `Datos del cuaderno:\n${resumenPatron}`,
-    textoPdf && `Texto del patrón / PDF (usa esto para responder):\n${textoPdf}`,
-    aviso && `Nota: ${aviso}`,
+    usarPdf
+      ? archivosLeidos.length > 0
+        ? `Archivos leídos: ${archivosLeidos.join(', ')}.`
+        : 'Sin texto de archivo; solo cuaderno.'
+      : 'Modo charla (sin PDF).',
+    resumenPatron && `Contexto breve:\n${resumenPatron}`,
+    usarPdf &&
+      textoPdf &&
+      `Texto del patrón / PDF (usa esto para responder):\n${textoPdf}`,
+    usarPdf && aviso && `Nota: ${aviso}`,
     `Pregunta:\n${pregunta}`,
     'Responde ya, corto y concreto.',
   ]
@@ -487,23 +529,20 @@ export async function pedirAyudaIa(opts: {
 
   const respuesta =
     proveedor === 'openai'
-      ? await llamarOpenAI(userContent)
-      : await llamarOllama(userContent)
+      ? await llamarOpenAI(userContent, system)
+      : await llamarOllama(userContent, system)
 
-  const avisoFinal = [
-    aviso || undefined,
-    archivosLeidos.length
-      ? `Leí: ${archivosLeidos.join(', ')}.`
-      : undefined,
-  ]
-    .filter(Boolean)
-    .join(' ')
+  const avisoFinal = usarPdf
+    ? [aviso || undefined, archivosLeidos.length ? `Leí: ${archivosLeidos.join(', ')}.` : undefined]
+        .filter(Boolean)
+        .join(' ')
+    : undefined
 
   return {
     respuesta,
     aviso: avisoFinal || undefined,
     proveedor,
-    archivosLeidos,
+    archivosLeidos: usarPdf ? archivosLeidos : [],
   }
 }
 

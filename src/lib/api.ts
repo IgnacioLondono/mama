@@ -218,6 +218,7 @@ export const api = {
     proyectoId?: string
     patronId?: string
     archivoId?: string
+    usarPdf?: boolean
   }) =>
     request<{
       respuesta: string

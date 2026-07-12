@@ -10,7 +10,7 @@ const HOLA: IaChatMsg = {
   id: 'hola',
   rol: 'bot',
   texto:
-    'Hola. Puedo mirar el patrón y el PDF y darte tips claros. ¿Qué necesitas?',
+    'Hola. Puedo charlar normal o mirar el PDF si lo activás. ¿En qué te ayudo?',
 }
 
 const MAX_MSGS = 80

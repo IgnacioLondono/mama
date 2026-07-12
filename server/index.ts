@@ -98,6 +98,7 @@ async function main() {
         archivoId: req.body?.archivoId as string | undefined,
         patronId: req.body?.patronId as string | undefined,
         proyectoId: req.body?.proyectoId as string | undefined,
+        usarPdf: Boolean(req.body?.usarPdf),
       })
       res.json(result)
     } catch (err) {
