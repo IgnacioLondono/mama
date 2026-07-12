@@ -1,5 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
 import { loadMesaPdfPos, saveMesaPdfPos } from '../lib/mesaSession'
+import {
+  COLORES_RESALTE,
+  loadPdfMarksPage,
+  savePdfMarksPage,
+  type PdfMarkPoint,
+  type PdfMarkStroke,
+} from '../lib/pdfMarks'
 import styles from './PdfVisor.module.css'
 
 interface Props {
@@ -18,19 +25,97 @@ function esCancelado(err: unknown): boolean {
   )
 }
 
+function uid() {
+  return `mk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`
+}
+
+function pintarStrokes(
+  ctx: CanvasRenderingContext2D,
+  strokes: PdfMarkStroke[],
+  w: number,
+  h: number,
+) {
+  ctx.clearRect(0, 0, w, h)
+  for (const s of strokes) {
+    if (s.points.length < 1) continue
+    const lineW = Math.max(8, s.grosor * h)
+    ctx.strokeStyle = s.color
+    ctx.fillStyle = s.color
+    ctx.lineWidth = lineW
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.globalCompositeOperation = 'multiply'
+
+    if (s.tipo === 'linea' || s.points.length === 1) {
+      const y = s.points[0].y * h
+      const xs = s.points.map((p) => p.x * w)
+      const x0 = Math.min(...xs)
+      const x1 = Math.max(...xs)
+      ctx.beginPath()
+      ctx.moveTo(x0, y)
+      ctx.lineTo(Math.max(x0 + 2, x1), y)
+      ctx.stroke()
+    } else {
+      ctx.beginPath()
+      ctx.moveTo(s.points[0].x * w, s.points[0].y * h)
+      for (let i = 1; i < s.points.length; i++) {
+        ctx.lineTo(s.points[i].x * w, s.points[i].y * h)
+      }
+      ctx.stroke()
+    }
+  }
+  ctx.globalCompositeOperation = 'source-over'
+}
+
 export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const markRef = useRef<HTMLCanvasElement>(null)
+  const stackRef = useRef<HTMLDivElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const docRef = useRef<any>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderTaskRef = useRef<any>(null)
+  const drawingRef = useRef(false)
+  const draftRef = useRef<PdfMarkPoint[]>([])
+  const strokesRef = useRef<PdfMarkStroke[]>([])
+
   const [paginas, setPaginas] = useState(0)
   const [pagina, setPagina] = useState(1)
   const [loading, setLoading] = useState(true)
   const [pintando, setPintando] = useState(false)
   const [error, setError] = useState('')
   const [ancho, setAncho] = useState(0)
+  const [pincel, setPincel] = useState(false)
+  const [borrador, setBorrador] = useState(false)
+  const [colorIdx, setColorIdx] = useState(0)
+  const [strokes, setStrokes] = useState<PdfMarkStroke[]>([])
+
+  const puedeMarcar = Boolean(proyectoId && archivoId)
+
+  const redibujarMarcas = useCallback((list: PdfMarkStroke[]) => {
+    const mark = markRef.current
+    const pdf = canvasRef.current
+    if (!mark || !pdf) return
+    mark.width = pdf.width
+    mark.height = pdf.height
+    mark.style.width = pdf.style.width
+    mark.style.height = pdf.style.height
+    const ctx = mark.getContext('2d')
+    if (!ctx) return
+    const cssW = pdf.clientWidth || parseFloat(pdf.style.width) || mark.width
+    const cssH = pdf.clientHeight || parseFloat(pdf.style.height) || mark.height
+    // Dibujar en coordenadas CSS vía transform del canvas bitmap
+    const dprX = mark.width / cssW
+    const dprY = mark.height / cssH
+    ctx.setTransform(dprX, 0, 0, dprY, 0, 0)
+    pintarStrokes(ctx, list, cssW, cssH)
+  }, [])
+
+  useEffect(() => {
+    strokesRef.current = strokes
+    redibujarMarcas(strokes)
+  }, [strokes, redibujarMarcas, pintando, loading])
 
   useEffect(() => {
     const el = wrapRef.current
@@ -113,6 +198,14 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   }, [url, proyectoId, archivoId])
 
   useEffect(() => {
+    if (!proyectoId || !archivoId || paginas === 0) {
+      setStrokes([])
+      return
+    }
+    setStrokes(loadPdfMarksPage(proyectoId, archivoId, pagina))
+  }, [proyectoId, archivoId, pagina, paginas])
+
+  useEffect(() => {
     let cancelled = false
 
     async function render() {
@@ -159,6 +252,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         renderTaskRef.current = task
         await task.promise
         if (cancelled) return
+        redibujarMarcas(strokesRef.current)
         if (wrapRef.current) wrapRef.current.scrollTop = 0
       } catch (err) {
         if (!cancelled && !esCancelado(err)) {
@@ -179,7 +273,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
       }
       renderTaskRef.current = null
     }
-  }, [pagina, paginas, url, ancho, loading, error])
+  }, [pagina, paginas, url, ancho, loading, error, redibujarMarcas])
 
   useEffect(() => {
     if (!proyectoId || !archivoId || paginas === 0 || loading) return
@@ -190,6 +284,108 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
     })
   }, [pagina, paginas, proyectoId, archivoId, loading])
 
+  function persist(next: PdfMarkStroke[]) {
+    setStrokes(next)
+    if (proyectoId && archivoId) {
+      savePdfMarksPage(proyectoId, archivoId, pagina, next)
+    }
+  }
+
+  function puntoDesdeEvento(e: PointerEvent<HTMLCanvasElement>): PdfMarkPoint | null {
+    const mark = markRef.current
+    if (!mark) return null
+    const rect = mark.getBoundingClientRect()
+    if (rect.width < 1 || rect.height < 1) return null
+    return {
+      x: Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)),
+      y: Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)),
+    }
+  }
+
+  function onPointerDown(e: PointerEvent<HTMLCanvasElement>) {
+    if (!pincel || !puedeMarcar || loading) return
+    e.preventDefault()
+    const p = puntoDesdeEvento(e)
+    if (!p) return
+    markRef.current?.setPointerCapture(e.pointerId)
+
+    if (borrador) {
+      const hitR = 0.035
+      const next = strokesRef.current.filter((s) => {
+        return !s.points.some(
+          (pt) =>
+            Math.hypot(pt.x - p.x, pt.y - p.y) < hitR ||
+            (s.tipo === 'linea' &&
+              Math.abs(pt.y - p.y) < hitR * 1.2 &&
+              p.x >= Math.min(...s.points.map((x) => x.x)) - hitR &&
+              p.x <= Math.max(...s.points.map((x) => x.x)) + hitR),
+        )
+      })
+      persist(next)
+      return
+    }
+
+    drawingRef.current = true
+    draftRef.current = [p]
+    redibujarMarcas([
+      ...strokesRef.current,
+      {
+        id: 'draft',
+        tipo: 'linea',
+        color: COLORES_RESALTE[colorIdx].color,
+        grosor: 0.028,
+        points: [p, p],
+      },
+    ])
+  }
+
+  function onPointerMove(e: PointerEvent<HTMLCanvasElement>) {
+    if (!drawingRef.current || borrador) return
+    const p = puntoDesdeEvento(e)
+    if (!p) return
+    const start = draftRef.current[0]
+    if (!start) return
+    // Resaltador de línea: fija Y al inicio (como marcar texto)
+    draftRef.current = [start, { x: p.x, y: start.y }]
+    redibujarMarcas([
+      ...strokesRef.current,
+      {
+        id: 'draft',
+        tipo: 'linea',
+        color: COLORES_RESALTE[colorIdx].color,
+        grosor: 0.028,
+        points: draftRef.current,
+      },
+    ])
+  }
+
+  function onPointerUp(e: PointerEvent<HTMLCanvasElement>) {
+    if (!drawingRef.current) return
+    drawingRef.current = false
+    try {
+      markRef.current?.releasePointerCapture(e.pointerId)
+    } catch {
+      /* ignore */
+    }
+    const pts = draftRef.current
+    draftRef.current = []
+    if (pts.length < 1) return
+    const xs = pts.map((p) => p.x)
+    const span = Math.abs(Math.max(...xs) - Math.min(...xs))
+    if (span < 0.01) {
+      redibujarMarcas(strokesRef.current)
+      return
+    }
+    const stroke: PdfMarkStroke = {
+      id: uid(),
+      tipo: 'linea',
+      color: COLORES_RESALTE[colorIdx].color,
+      grosor: 0.028,
+      points: pts,
+    }
+    persist([...strokesRef.current, stroke])
+  }
+
   function ir(delta: number) {
     setError('')
     setPagina((p) => Math.min(paginas, Math.max(1, p + delta)))
@@ -197,6 +393,11 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
 
   function reintentar() {
     setError('')
+  }
+
+  function borrarPagina() {
+    if (!puedeMarcar) return
+    persist([])
   }
 
   if (error && !docRef.current) {
@@ -243,6 +444,62 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         </button>
       </div>
 
+      {puedeMarcar ? (
+        <div className={styles.markBar}>
+          <button
+            type="button"
+            className={`${styles.toolBtn} ${pincel && !borrador ? styles.toolOn : ''}`}
+            onClick={() => {
+              setPincel((v) => !v || borrador)
+              setBorrador(false)
+            }}
+            title="Resaltar líneas"
+            aria-pressed={pincel && !borrador}
+          >
+            Pincel
+          </button>
+          <button
+            type="button"
+            className={`${styles.toolBtn} ${borrador ? styles.toolOn : ''}`}
+            disabled={!pincel && strokes.length === 0}
+            onClick={() => {
+              setPincel(true)
+              setBorrador((v) => !v)
+            }}
+            title="Borrar marcas"
+            aria-pressed={borrador}
+          >
+            Borrar
+          </button>
+          <div className={styles.swatches} role="group" aria-label="Color">
+            {COLORES_RESALTE.map((c, i) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`${styles.swatch} ${colorIdx === i ? styles.swatchOn : ''}`}
+                style={{ background: c.color.replace(/[\d.]+\)$/, '0.85)') }}
+                title={c.label}
+                aria-label={c.label}
+                onClick={() => {
+                  setColorIdx(i)
+                  setPincel(true)
+                  setBorrador(false)
+                }}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className={styles.toolBtn}
+            disabled={strokes.length === 0}
+            onClick={borrarPagina}
+            title="Limpiar marcas de esta página"
+          >
+            Limpiar
+          </button>
+        </div>
+      ) : null}
+
       {error ? (
         <div className={styles.fallbackInline}>
           <p>{error}</p>
@@ -270,12 +527,21 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         {loading ? (
           <p className={styles.loading}>Preparando el patrón…</p>
         ) : null}
-        {/* Canvas siempre montado (oculto al cargar) para evitar carreras de ref */}
-        <canvas
-          ref={canvasRef}
-          className={styles.canvas}
-          style={{ display: loading ? 'none' : 'block' }}
-        />
+        <div
+          ref={stackRef}
+          className={styles.stack}
+          style={{ display: loading ? 'none' : 'inline-block' }}
+        >
+          <canvas ref={canvasRef} className={styles.canvas} />
+          <canvas
+            ref={markRef}
+            className={`${styles.markCanvas} ${pincel ? styles.markActive : ''}`}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          />
+        </div>
       </div>
     </div>
   )
