@@ -18,6 +18,29 @@ services:
       timeout: 5s
       retries: 20
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: tejidos-ollama
+    restart: unless-stopped
+    volumes:
+      - tejidos_ollama:/root/.ollama
+    # Sin publicar 11434 al host (solo red interna del stack).
+    # Si quieres usarlo desde fuera: "11434:11434"
+
+  # Baja el modelo la primera vez (llama3.2 ~2 GB). Luego puedes pararlo.
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: tejidos-ollama-pull
+    depends_on:
+      - ollama
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "sleep 8 &&
+       ollama pull ${OLLAMA_MODEL:-llama3.2}"
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+
   app:
     build: .
     container_name: tejidos-app
@@ -25,6 +48,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      ollama:
+        condition: service_started
     environment:
       PORT: 3001
       MYSQL_HOST: mysql
@@ -33,10 +58,11 @@ services:
       MYSQL_USER: ${MYSQL_USER:-tejidos}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tejidos}
       APP_PASSWORD: ${APP_PASSWORD:-}
+      # Deja OPENAI vacío para usar Ollama
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
     volumes:
       - tejidos_uploads:/app/data/uploads
@@ -46,3 +72,4 @@ services:
 volumes:
   tejidos_mysql:
   tejidos_uploads:
+  tejidos_ollama:
