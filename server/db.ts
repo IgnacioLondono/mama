@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import mysql, { type Pool, type ResultSetHeader, type RowDataPacket } from 'mysql2/promise'
 import { seedMateriales, seedPatrones } from '../src/data/seed.ts'
 import type { ArchivoMeta, Material, Patron, Proyecto } from '../src/types.ts'
+import { normalizarColorCarpeta, normalizarIconoPatron } from '../src/types.ts'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
@@ -125,7 +126,8 @@ async function hydratePatron(raw: Patron): Promise<Patron> {
   return {
     ...raw,
     categoria: raw.categoria ?? 'Otro',
-    icono: raw.icono ?? 'coral',
+    icono: normalizarIconoPatron(raw.icono),
+    colorCarpeta: normalizarColorCarpeta(raw.colorCarpeta),
     archivos,
     archivoActivoId: raw.archivoActivoId ?? archivos[0]?.id ?? null,
   }

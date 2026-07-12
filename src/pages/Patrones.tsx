@@ -1,18 +1,24 @@
 import { useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { IconFolder } from '../components/Icons'
+import { ArchivoPreview } from '../components/ArchivoPreview'
 import { Modal } from '../components/Modal'
+import { TemaColorPicker, PatronTemaIcon } from '../components/TemaColorPicker'
 import { useAppData } from '../context/AppDataContext'
 import { uid } from '../lib/storage'
 import type {
+  ArchivoMeta,
   CategoriaPatron,
+  ColorCarpeta,
   Dificultad,
   IconoPatron,
   Patron,
 } from '../types'
 import {
   CATEGORIAS_PATRON,
+  COLORES_CARPETA,
   ICONOS_PATRON,
+  normalizarColorCarpeta,
+  normalizarIconoPatron,
 } from '../types'
 import styles from './Patrones.module.css'
 
@@ -28,27 +34,43 @@ const difRank: Record<Dificultad, number> = {
   dificil: 2,
 }
 
-const folderClass: Record<IconoPatron, string> = {
-  coral: styles.folderCoral,
-  sage: styles.folderSage,
-  wool: styles.folderWool,
-  ink: styles.folderInk,
-  rose: styles.folderRose,
-  sky: styles.folderSky,
-}
-
 const emptyForm = {
   nombre: '',
   descripcion: '',
   dificultad: 'facil' as Dificultad,
   tiempoEstimado: '',
   categoria: 'Amigurumi' as CategoriaPatron,
-  icono: 'coral' as IconoPatron,
+  icono: 'carpeta' as IconoPatron,
+  colorCarpeta: 'coral' as ColorCarpeta,
 }
 
-type Orden = 'nombre' | 'categoria' | 'dificultad'
+type Orden = 'nombre' | 'categoria' | 'dificultad' | 'carpeta'
 
 const ACCEPT = 'application/pdf,image/*,.pdf,.png,.jpg,.jpeg,.webp'
+
+function pickPreview(archivos: ArchivoMeta[] | undefined): ArchivoMeta | undefined {
+  if (!archivos?.length) return undefined
+  return (
+    archivos.find(
+      (a) =>
+        a.tipo === 'application/pdf' ||
+        a.nombre.toLowerCase().endsWith('.pdf') ||
+        a.tipo.startsWith('image/'),
+    ) ?? archivos[0]
+  )
+}
+
+function carpetaKey(p: Patron) {
+  const tema = normalizarIconoPatron(p.icono)
+  const color = normalizarColorCarpeta(p.colorCarpeta)
+  return `${tema}::${color}`
+}
+
+function carpetaLabel(tema: IconoPatron, color: ColorCarpeta) {
+  const temaLbl = ICONOS_PATRON.find((i) => i.id === tema)?.label ?? tema
+  const colorLbl = COLORES_CARPETA.find((c) => c.id === color)?.label ?? color
+  return `${temaLbl} · ${colorLbl}`
+}
 
 export function Patrones() {
   const {
@@ -61,7 +83,7 @@ export function Patrones() {
   const [q, setQ] = useState('')
   const [dif, setDif] = useState<'todas' | Dificultad>('todas')
   const [cat, setCat] = useState<'todas' | CategoriaPatron>('todas')
-  const [orden, setOrden] = useState<Orden>('nombre')
+  const [orden, setOrden] = useState<Orden>('carpeta')
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
@@ -72,7 +94,8 @@ export function Patrones() {
   const [carpetaId, setCarpetaId] = useState<string | null>(null)
   const [carpetaForm, setCarpetaForm] = useState({
     categoria: 'Amigurumi' as CategoriaPatron,
-    icono: 'coral' as IconoPatron,
+    icono: 'carpeta' as IconoPatron,
+    colorCarpeta: 'coral' as ColorCarpeta,
   })
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -97,6 +120,12 @@ export function Patrones() {
     })
 
     return [...list].sort((a, b) => {
+      if (orden === 'carpeta') {
+        const ka = carpetaKey(a)
+        const kb = carpetaKey(b)
+        if (ka !== kb) return ka.localeCompare(kb, 'es')
+        return a.nombre.localeCompare(b.nombre, 'es')
+      }
       if (orden === 'categoria')
         return (a.categoria ?? '').localeCompare(b.categoria ?? '', 'es')
       if (orden === 'dificultad')
@@ -104,6 +133,27 @@ export function Patrones() {
       return a.nombre.localeCompare(b.nombre, 'es')
     })
   }, [patrones, q, dif, cat, orden])
+
+  const carpetas = useMemo(() => {
+    const map = new Map<
+      string,
+      { tema: IconoPatron; color: ColorCarpeta; items: Patron[] }
+    >()
+    for (const p of filtered) {
+      const tema = normalizarIconoPatron(p.icono)
+      const color = normalizarColorCarpeta(p.colorCarpeta)
+      const key = `${tema}::${color}`
+      const cur = map.get(key)
+      if (cur) cur.items.push(p)
+      else map.set(key, { tema, color, items: [p] })
+    }
+    return [...map.values()].sort((a, b) =>
+      carpetaLabel(a.tema, a.color).localeCompare(
+        carpetaLabel(b.tema, b.color),
+        'es',
+      ),
+    )
+  }, [filtered])
 
   function closeForm() {
     setShowForm(false)
@@ -128,7 +178,8 @@ export function Patrones() {
       dificultad: p.dificultad,
       tiempoEstimado: p.tiempoEstimado,
       categoria: p.categoria ?? 'Amigurumi',
-      icono: p.icono ?? 'coral',
+      icono: normalizarIconoPatron(p.icono),
+      colorCarpeta: normalizarColorCarpeta(p.colorCarpeta),
     })
     setPendientes([])
     setShowForm(true)
@@ -138,7 +189,8 @@ export function Patrones() {
     setCarpetaId(p.id)
     setCarpetaForm({
       categoria: p.categoria ?? 'Amigurumi',
-      icono: p.icono ?? 'coral',
+      icono: normalizarIconoPatron(p.icono),
+      colorCarpeta: normalizarColorCarpeta(p.colorCarpeta),
     })
   }
 
@@ -169,27 +221,24 @@ export function Patrones() {
     if (!form.nombre.trim() || subiendo) return
     setSubiendo(true)
     try {
+      const base = {
+        nombre: form.nombre.trim(),
+        descripcion: form.descripcion.trim() || 'Sin notas todavía',
+        dificultad: form.dificultad,
+        tiempoEstimado: form.tiempoEstimado.trim() || 'Sin estimar',
+        categoria: form.categoria,
+        icono: form.icono,
+        colorCarpeta: form.colorCarpeta,
+      }
       if (editId) {
-        await updatePatron(editId, {
-          nombre: form.nombre.trim(),
-          descripcion: form.descripcion.trim() || 'Sin notas todavía',
-          dificultad: form.dificultad,
-          tiempoEstimado: form.tiempoEstimado.trim() || 'Sin estimar',
-          categoria: form.categoria,
-          icono: form.icono,
-        })
+        await updatePatron(editId, base)
         for (const file of pendientes) {
           await uploadArchivoPatron(editId, file)
         }
       } else {
         const parteId = uid('parte')
         const nuevo: Omit<Patron, 'id' | 'archivos' | 'archivoActivoId'> = {
-          nombre: form.nombre.trim(),
-          descripcion: form.descripcion.trim() || 'Sin notas todavía',
-          dificultad: form.dificultad,
-          tiempoEstimado: form.tiempoEstimado.trim() || 'Sin estimar',
-          categoria: form.categoria,
-          icono: form.icono,
+          ...base,
           materiales: [],
           abreviaciones: ['pb: punto bajo', 'aum: aumento', 'dis: disminución'],
           partes: [
@@ -223,6 +272,7 @@ export function Patrones() {
       await updatePatron(carpetaId, {
         categoria: carpetaForm.categoria,
         icono: carpetaForm.icono,
+        colorCarpeta: carpetaForm.colorCarpeta,
       })
       setCarpetaId(null)
     } finally {
@@ -284,6 +334,7 @@ export function Patrones() {
             onChange={(e) => setOrden(e.target.value as Orden)}
             aria-label="Ordenar patrones"
           >
+            <option value="carpeta">Carpeta</option>
             <option value="nombre">Nombre</option>
             <option value="categoria">Categoría</option>
             <option value="dificultad">Dificultad</option>
@@ -435,24 +486,12 @@ export function Patrones() {
                   ))}
                 </select>
               </div>
-              <fieldset className={styles.iconPicker}>
-                <legend>Icono de carpeta</legend>
-                <div className={styles.iconGrid} role="radiogroup">
-                  {ICONOS_PATRON.map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={form.icono === opt.id}
-                      aria-label={opt.label}
-                      className={`${styles.iconBtn} ${folderClass[opt.id]} ${form.icono === opt.id ? styles.iconBtnOn : ''}`}
-                      onClick={() => setForm({ ...form, icono: opt.id })}
-                    >
-                      <IconFolder width={22} height={22} />
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
+              <TemaColorPicker
+                icono={form.icono}
+                color={form.colorCarpeta}
+                onIcono={(icono) => setForm({ ...form, icono })}
+                onColor={(colorCarpeta) => setForm({ ...form, colorCarpeta })}
+              />
             </section>
           </div>
 
@@ -507,26 +546,14 @@ export function Patrones() {
               ))}
             </select>
           </div>
-          <fieldset className={styles.iconPicker}>
-            <legend>Color</legend>
-            <div className={styles.iconGrid} role="radiogroup">
-              {ICONOS_PATRON.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={carpetaForm.icono === opt.id}
-                  aria-label={opt.label}
-                  className={`${styles.iconBtn} ${folderClass[opt.id]} ${carpetaForm.icono === opt.id ? styles.iconBtnOn : ''}`}
-                  onClick={() =>
-                    setCarpetaForm({ ...carpetaForm, icono: opt.id })
-                  }
-                >
-                  <IconFolder width={22} height={22} />
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <TemaColorPicker
+            icono={carpetaForm.icono}
+            color={carpetaForm.colorCarpeta}
+            onIcono={(icono) => setCarpetaForm({ ...carpetaForm, icono })}
+            onColor={(colorCarpeta) =>
+              setCarpetaForm({ ...carpetaForm, colorCarpeta })
+            }
+          />
           <div className={styles.formActions}>
             <button
               type="button"
@@ -579,70 +606,106 @@ export function Patrones() {
             : 'Ningún patrón coincide con los filtros.'}
         </p>
       ) : (
-        <ul className={styles.shelf}>
-          {filtered.map((p) => {
-            const icono = p.icono ?? 'coral'
+        <div className={styles.carpetas}>
+          {carpetas.map(({ tema, color, items }) => {
+            const hex =
+              COLORES_CARPETA.find((c) => c.id === color)?.hex ?? '#c45f48'
             return (
-              <li key={p.id} className={styles.shelfItem}>
-                <Link
-                  to={`/patrones/${p.id}`}
-                  className={`${styles.folderThumb} ${folderClass[icono]}`}
-                  aria-label={`Abrir ${p.nombre}`}
+              <section
+                key={`${tema}::${color}`}
+                className={styles.carpetaGroup}
+              >
+                <header
+                  className={styles.carpetaHead}
+                  style={{ background: hex }}
                 >
-                  <IconFolder width={28} height={28} />
-                </Link>
-                <div className={styles.shelfMain}>
-                  <div className={styles.itemTop}>
-                    <Link to={`/patrones/${p.id}`} className={styles.itemTitle}>
-                      {p.nombre}
-                    </Link>
-                    <div className={styles.badges}>
-                      <span className={styles.catBadge}>
-                        {p.categoria ?? 'Otro'}
-                      </span>
-                      <span className={`badge badge-${p.dificultad}`}>
-                        {labels[p.dificultad]}
-                      </span>
-                    </div>
+                  <span className={styles.carpetaIcon}>
+                    <PatronTemaIcon id={tema} size={26} />
+                  </span>
+                  <div className={styles.carpetaMeta}>
+                    <h2>{carpetaLabel(tema, color)}</h2>
+                    <p>
+                      {items.length}{' '}
+                      {items.length === 1 ? 'patrón' : 'patrones'}
+                    </p>
                   </div>
-                  <p className={styles.desc}>{p.descripcion}</p>
-                  <p className={styles.meta}>
-                    {p.partes.length} partes · {p.tiempoEstimado}
-                    {(p.archivos?.length ?? 0) > 0
-                      ? ` · ${p.archivos.length} archivo${p.archivos.length === 1 ? '' : 's'}`
-                      : ''}
-                  </p>
-                </div>
-                <div className={styles.shelfActions}>
-                  <Link to={`/patrones/${p.id}`} className="btn btn-secondary">
-                    Abrir
-                  </Link>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    onClick={() => openCarpeta(p)}
-                  >
-                    Carpeta
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    onClick={() => startEdit(p)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={() => setBorrarId(p.id)}
-                  >
-                    Borrar
-                  </button>
-                </div>
-              </li>
+                </header>
+
+                <ul className={styles.carpetaBody}>
+                  {items.map((p) => {
+                    const preview = pickPreview(p.archivos)
+                    return (
+                      <li key={p.id} className={styles.patronCard}>
+                        <Link
+                          to={`/patrones/${p.id}`}
+                          className={styles.patronThumb}
+                        >
+                          {preview ? (
+                            <ArchivoPreview archivo={preview} alt={p.nombre} />
+                          ) : (
+                            <span
+                              className={styles.patronFallback}
+                              style={{ background: hex }}
+                            >
+                              <PatronTemaIcon id={tema} size={32} />
+                            </span>
+                          )}
+                        </Link>
+                        <div className={styles.patronInfo}>
+                          <div className={styles.patronTop}>
+                            <Link
+                              to={`/patrones/${p.id}`}
+                              className={styles.patronTitle}
+                            >
+                              {p.nombre}
+                            </Link>
+                            <span className={`badge badge-${p.dificultad}`}>
+                              {labels[p.dificultad]}
+                            </span>
+                          </div>
+                          <p className={styles.patronDesc}>{p.descripcion}</p>
+                          <p className={styles.patronMeta}>
+                            {p.categoria ?? 'Otro'} · {p.partes.length} partes
+                            · {p.tiempoEstimado}
+                          </p>
+                          <div className={styles.patronActions}>
+                            <Link
+                              to={`/patrones/${p.id}`}
+                              className="btn btn-secondary"
+                            >
+                              Abrir
+                            </Link>
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() => openCarpeta(p)}
+                            >
+                              Carpeta
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() => startEdit(p)}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-danger"
+                              onClick={() => setBorrarId(p.id)}
+                            >
+                              Borrar
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
             )
           })}
-        </ul>
+        </div>
       )}
     </div>
   )

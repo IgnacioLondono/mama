@@ -195,21 +195,31 @@
 }
 
 .iconGrid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr));
+  gap: 0.45rem;
 }
 
 .iconBtn {
-  width: 2.6rem;
-  height: 2.6rem;
+  min-height: 3.4rem;
+  padding: 0.35rem 0.25rem;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.2rem;
   border: 2px solid transparent;
   border-radius: var(--radius-sm);
   color: #faf6ef;
   cursor: pointer;
+}
+
+.iconLabel {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  color: rgba(250, 246, 239, 0.92);
 }
 
 .iconBtnOn {
@@ -243,6 +253,155 @@
   flex-wrap: wrap;
   gap: 0.55rem;
   align-items: center;
+}
+
+.carpetas {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.carpetaGroup {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-solid);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+
+.carpetaHead {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: #faf6ef;
+}
+
+.carpetaIcon {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.carpetaMeta h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #faf6ef;
+}
+
+.carpetaMeta p {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: rgba(250, 246, 239, 0.85);
+}
+
+.carpetaBody {
+  list-style: none;
+  margin: 0;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-line);
+}
+
+.patronCard {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  padding: 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-solid);
+  align-items: start;
+}
+
+.patronThumb {
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: block;
+  flex-shrink: 0;
+  border: 1px solid var(--color-line);
+  background: var(--color-viewer);
+  text-decoration: none;
+}
+
+.patronThumb img,
+.patronThumb canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.patronFallback {
+  width: 100%;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #faf6ef;
+}
+
+.patronInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.patronTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.patronTitle {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 550;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.patronTitle:hover {
+  color: var(--color-coral-deep);
+}
+
+.patronDesc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--color-ink-soft);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.patronMeta {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--color-muted);
+}
+
+.patronActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
 }
 
 .search,
@@ -322,28 +481,58 @@
   color: #faf6ef;
 }
 
-.folderCoral {
+.folderCoral,
+.folderCarpeta {
   background: #c45f48;
 }
 
-.folderSage {
+.folderSage,
+.folderCasa {
   background: #5f7d64;
 }
 
-.folderWool {
+.folderWool,
+.folderLana {
   background: #b89a78;
 }
 
-.folderInk {
+.folderInk,
+.folderLibro {
   background: #2a2420;
 }
 
-.folderRose {
+.folderRose,
+.folderCorazon {
   background: #c4788a;
 }
 
-.folderSky {
+.folderSky,
+.folderAnime {
   background: #6a8fa8;
+}
+
+.folderSeries {
+  background: #5b6ea8;
+}
+
+.folderPelicula {
+  background: #7a5e8a;
+}
+
+.folderJuego {
+  background: #3f8a7a;
+}
+
+.folderMusica {
+  background: #a86a4a;
+}
+
+.folderAnimal {
+  background: #8a7a4a;
+}
+
+.folderEstrella {
+  background: #c49a3a;
 }
 
 .shelfActions {
@@ -432,15 +621,14 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .shelfItem {
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
+  .carpetaBody {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  .shelfActions {
-    grid-column: auto;
-    flex-direction: column;
-    align-items: stretch;
+@media (min-width: 1100px) {
+  .carpetaBody {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
