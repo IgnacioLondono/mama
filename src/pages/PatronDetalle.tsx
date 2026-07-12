@@ -29,6 +29,7 @@ export function PatronDetalle() {
   const [desc, setDesc] = useState(patron?.descripcion ?? '')
   const [editNombre, setEditNombre] = useState(false)
   const [nombreDraft, setNombreDraft] = useState(patron?.nombre ?? '')
+  const [starting, setStarting] = useState(false)
 
   if (!patron) {
     return (
@@ -42,8 +43,14 @@ export function PatronDetalle() {
   }
 
   async function iniciar() {
-    const proy = await startProyecto(patron!.id)
-    navigate(`/proyectos/${proy.id}`)
+    if (starting) return
+    setStarting(true)
+    try {
+      const proy = await startProyecto(patron!.id)
+      navigate(`/proyectos/${proy.id}`)
+    } catch {
+      setStarting(false)
+    }
   }
 
   async function guardarDesc() {
@@ -186,9 +193,10 @@ export function PatronDetalle() {
           <button
             type="button"
             className={`btn btn-primary btn-lg ${styles.ctaBtn}`}
+            disabled={starting}
             onClick={() => void iniciar()}
           >
-            Empezar a tejerlo
+            {starting ? 'Abriendo…' : 'Empezar a tejerlo'}
           </button>
         </div>
       </header>
@@ -238,8 +246,8 @@ export function PatronDetalle() {
                     </div>
                   </div>
                   <ol className={styles.steps}>
-                    {parte.instrucciones.map((ins) => (
-                      <li key={ins}>{ins}</li>
+                    {parte.instrucciones.map((ins, idx) => (
+                      <li key={`${parte.id}-${idx}`}>{ins}</li>
                     ))}
                   </ol>
                 </article>
@@ -255,8 +263,8 @@ export function PatronDetalle() {
               <p className={styles.muted}>Todavía no anotaste materiales.</p>
             ) : (
               <ul className={styles.plainList}>
-                {patron.materiales.map((m) => (
-                  <li key={m.nombre}>
+                {patron.materiales.map((m, idx) => (
+                  <li key={`${m.nombre}-${idx}`}>
                     <strong>{m.nombre}</strong>
                     <span>{m.cantidad}</span>
                   </li>
@@ -271,8 +279,8 @@ export function PatronDetalle() {
               <p className={styles.muted}>Sin abreviaciones anotadas.</p>
             ) : (
               <ul className={styles.abbr}>
-                {patron.abreviaciones.map((a) => (
-                  <li key={a}>{a}</li>
+                {patron.abreviaciones.map((a, idx) => (
+                  <li key={`${idx}-${a}`}>{a}</li>
                 ))}
               </ul>
             )}

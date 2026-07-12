@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { api } from '../lib/api'
 import { AsistenteIa } from './AsistenteIa'
 import { IconChat } from './Icons'
 import styles from './IaBurbuja.module.css'
@@ -14,16 +13,6 @@ export function IaBurbuja({ proyectoId, patronId, archivoId }: Props) {
   const [open, setOpen] = useState(false)
   const titleId = useId()
   const closeRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    void api
-      .iaPrecargar({
-        proyectoId,
-        patronId,
-        archivoId: archivoId ?? undefined,
-      })
-      .catch(() => {})
-  }, [proyectoId, patronId, archivoId])
 
   useEffect(() => {
     if (!open) return

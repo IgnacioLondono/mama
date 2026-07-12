@@ -26,9 +26,17 @@ export function Modal({
 }: Props) {
   const titleId = useId()
   const cancelRef = useRef<HTMLButtonElement>(null)
+  const confirmingRef = useRef(false)
 
   useEffect(() => {
-    if (!open) return
+    if (!busy) confirmingRef.current = false
+  }, [busy])
+
+  useEffect(() => {
+    if (!open) {
+      confirmingRef.current = false
+      return
+    }
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     cancelRef.current?.focus()
@@ -44,6 +52,12 @@ export function Modal({
   }, [open, busy, onCancel])
 
   if (!open) return null
+
+  function handleConfirm() {
+    if (busy || confirmingRef.current) return
+    confirmingRef.current = true
+    onConfirm()
+  }
 
   return (
     <div
@@ -77,7 +91,7 @@ export function Modal({
             type="button"
             className={danger ? 'btn btn-danger' : 'btn btn-sage'}
             disabled={busy}
-            onClick={onConfirm}
+            onClick={handleConfirm}
           >
             {busy ? 'Un momento…' : confirmLabel}
           </button>

@@ -80,7 +80,7 @@ export function Patrones() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!form.nombre.trim()) return
+    if (!form.nombre.trim() || subiendo) return
     setSubiendo(true)
     try {
       const parteId = uid('parte')

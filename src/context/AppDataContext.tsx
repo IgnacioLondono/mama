@@ -174,7 +174,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const addPatron = useCallback(
     async (patron: Omit<Patron, 'id' | 'archivos' | 'archivoActivoId'>) => {
       const nuevo = await api.createPatron(patron)
-      setPatrones((prev) => [...prev, nuevo])
+      setPatrones((prev) =>
+        prev.some((p) => p.id === nuevo.id) ? prev : [...prev, nuevo],
+      )
       return nuevo
     },
     [],
@@ -192,7 +194,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const startProyecto = useCallback(async (patronId: string, nombre?: string) => {
     const nuevo = await api.createProyecto(patronId, nombre)
-    setProyectos((prev) => [nuevo, ...prev])
+    setProyectos((prev) =>
+      prev.some((p) => p.id === nuevo.id) ? prev : [nuevo, ...prev],
+    )
     return nuevo
   }, [])
 
@@ -328,7 +332,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const addMaterial = useCallback(async (material: Omit<Material, 'id'>) => {
     const nuevo = await api.createMaterial(material)
-    setMateriales((prev) => [...prev, nuevo])
+    setMateriales((prev) =>
+      prev.some((m) => m.id === nuevo.id) ? prev : [...prev, nuevo],
+    )
     return nuevo
   }, [])
 

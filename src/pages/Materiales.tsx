@@ -6,7 +6,7 @@ import {
   type DragEvent,
   type FormEvent,
 } from 'react'
-import { IconYarn } from '../components/Icons'
+import { IconTrash, IconYarn } from '../components/Icons'
 import { Modal } from '../components/Modal'
 import { useAppData } from '../context/AppDataContext'
 import { api } from '../lib/api'
@@ -55,6 +55,7 @@ export function Materiales() {
   const bajos = materiales.filter(
     (m) => m.minimo != null && m.cantidad <= m.minimo,
   )
+  const lanas = materiales.filter((m) => m.tipo === 'lana').length
   const aBorrar = borrarId
     ? materiales.find((m) => m.id === borrarId)
     : undefined
@@ -97,7 +98,7 @@ export function Materiales() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!form.nombre.trim()) return
+    if (!form.nombre.trim() || busy) return
     setBusy(true)
     try {
       const payload = {
@@ -173,39 +174,58 @@ export function Materiales() {
 
   return (
     <div className={`page-enter ${styles.page}`}>
-      <header className={styles.header}>
-        <div>
+      <header className={styles.hero}>
+        <div className={styles.heroText}>
           <p className={styles.kicker}>Inventario</p>
-          <h1>Tu lana y cosas</h1>
+          <h1>Lana</h1>
           <p className={styles.lead}>
-            Lo que hay en casa. Si se acaba, te lo marco.
+            Ovillos, agujas y relleno que tenés en casa. Si se acaba, te lo
+            marco.
           </p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={openNew}>
+        <button
+          type="button"
+          className={`btn btn-primary btn-lg ${styles.cta}`}
+          onClick={openNew}
+        >
           {showForm && !editId ? 'Cerrar' : 'Anotar algo'}
         </button>
+
+        <div className={styles.stats} aria-label="Resumen">
+          <div className={styles.stat}>
+            <strong>{materiales.length}</strong>
+            <span>en total</span>
+          </div>
+          <div className={`${styles.stat} ${bajos.length ? styles.statWarn : ''}`}>
+            <strong>{bajos.length}</strong>
+            <span>por comprar</span>
+          </div>
+          <div className={styles.stat}>
+            <strong>{lanas}</strong>
+            <span>lanas</span>
+          </div>
+        </div>
       </header>
 
-      <section className={styles.strip} aria-label="Resumen">
-        <span>
-          <strong>{materiales.length}</strong> en total
-        </span>
-        <span>
-          <strong>{bajos.length}</strong> por comprar
-        </span>
-        <span>
-          <strong>
-            {materiales.filter((m) => m.tipo === 'lana').length}
-          </strong>{' '}
-          lanas
-        </span>
-      </section>
+      {bajos.length > 0 && filtro !== 'bajos' ? (
+        <button
+          type="button"
+          className={styles.alert}
+          onClick={() => setFiltro('bajos')}
+        >
+          <span className={styles.alertDot} aria-hidden />
+          {bajos.length === 1
+            ? `1 material se está acabando`
+            : `${bajos.length} materiales se están acabando`}
+          <span className={styles.alertLink}>Ver</span>
+        </button>
+      ) : null}
 
-      <div className={styles.filters}>
+      <div className={styles.toolbar}>
         <input
           className={styles.search}
           type="search"
-          placeholder="Buscar…"
+          placeholder="Buscar por nombre o tipo…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           aria-label="Buscar en el inventario"
@@ -265,11 +285,11 @@ export function Materiales() {
       </Modal>
 
       {showForm ? (
-        <form
-          className={styles.form}
-          onSubmit={(e) => void onSubmit(e)}
-        >
-          <h2>{editId ? 'Cambiar' : 'Anotar'}</h2>
+        <form className={styles.form} onSubmit={(e) => void onSubmit(e)}>
+          <div className={styles.formHead}>
+            <h2>{editId ? 'Editar material' : 'Anotar material'}</h2>
+            <p>Nombre, cantidad y una foto del ovillo si querés.</p>
+          </div>
 
           <div
             className={`${styles.drop} ${dragging ? styles.dropOn : ''}`}
@@ -281,11 +301,7 @@ export function Materiales() {
             onDrop={onDrop}
           >
             {formPreview ? (
-              <img
-                src={formPreview}
-                alt=""
-                className={styles.dropPreview}
-              />
+              <img src={formPreview} alt="" className={styles.dropPreview} />
             ) : (
               <span className={styles.dropIcon}>
                 <IconYarn width={28} height={28} />
@@ -293,40 +309,42 @@ export function Materiales() {
             )}
             <div className={styles.dropText}>
               <strong>Foto (opcional)</strong>
-              <span>Arrastra o elige una imagen de la madeja o el ovillo</span>
+              <span>Arrastrá o elegí una imagen</span>
             </div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => fileRef.current?.click()}
-            >
-              Elegir foto
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(e) => pickFoto(e.target.files?.[0])}
-            />
-            {editando?.imagen && !fotoPendiente ? (
+            <div className={styles.dropActions}>
               <button
                 type="button"
-                className="btn btn-ghost"
-                onClick={() => void deleteMaterialImagen(editando.id)}
+                className="btn btn-secondary"
+                onClick={() => fileRef.current?.click()}
               >
-                Quitar foto
+                Elegir foto
               </button>
-            ) : null}
-            {fotoPendiente ? (
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={clearFotoLocal}
-              >
-                Quitar
-              </button>
-            ) : null}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(e) => pickFoto(e.target.files?.[0])}
+              />
+              {editando?.imagen && !fotoPendiente ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => void deleteMaterialImagen(editando.id)}
+                >
+                  Quitar foto
+                </button>
+              ) : null}
+              {fotoPendiente ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={clearFotoLocal}
+                >
+                  Quitar
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <div className="field">
@@ -367,7 +385,10 @@ export function Materiales() {
                     setForm({ ...form, color: e.target.value })
                   }
                 />
-                <span style={{ background: form.color }} className={styles.colorSwatch} />
+                <span
+                  style={{ background: form.color }}
+                  className={styles.colorSwatch}
+                />
               </div>
             </div>
           </div>
@@ -406,7 +427,7 @@ export function Materiales() {
               />
             </div>
           </div>
-          <div className="row-actions">
+          <div className={styles.formActions}>
             <button type="submit" className="btn btn-sage" disabled={busy}>
               {busy ? 'Guardando…' : 'Guardar'}
             </button>
@@ -429,18 +450,31 @@ export function Materiales() {
       {materiales.length === 0 ? (
         <div className={styles.empty}>
           <span className={styles.emptyIcon}>
-            <IconYarn width={32} height={32} />
+            <IconYarn width={36} height={36} />
           </span>
-          <p>Todavía no anotaste nada del cajón.</p>
+          <h2>El cajón está vacío</h2>
+          <p>Anotá la primera madeja o aguja para empezar el inventario.</p>
           <button type="button" className="btn btn-primary" onClick={openNew}>
             Anotar algo
           </button>
         </div>
       ) : filtered.length === 0 ? (
-        <p className={styles.emptyFilter}>Nada coincide con ese filtro.</p>
+        <div className={styles.emptyFilter}>
+          <p>Nada coincide con esa búsqueda.</p>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => {
+              setQ('')
+              setFiltro('todos')
+            }}
+          >
+            Limpiar filtros
+          </button>
+        </div>
       ) : (
         <ul className={styles.grid}>
-          {filtered.map((m) => {
+          {filtered.map((m, i) => {
             const bajo = m.minimo != null && m.cantidad <= m.minimo
             const maxRef = Math.max(m.minimo ?? 1, m.cantidad, 1)
             const pct = Math.min(100, Math.round((m.cantidad / maxRef) * 100))
@@ -448,6 +482,7 @@ export function Materiales() {
               <li
                 key={m.id}
                 className={`${styles.card} ${bajo ? styles.bajo : ''}`}
+                style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
               >
                 <div className={styles.media}>
                   {m.imagen ? (
@@ -461,8 +496,13 @@ export function Materiales() {
                       className={styles.swatchBig}
                       style={{ background: m.color }}
                       aria-hidden
-                    />
+                    >
+                      <IconYarn width={40} height={40} />
+                    </div>
                   )}
+                  {bajo ? (
+                    <span className={styles.badgeLow}>Se acaba</span>
+                  ) : null}
                   <label className={styles.fotoBtn}>
                     Foto
                     <input
@@ -477,11 +517,8 @@ export function Materiales() {
                 <div className={styles.cardBody}>
                   <div className={styles.cardTop}>
                     <div>
+                      <p className={styles.tipo}>{tipoLabels[m.tipo]}</p>
                       <h3>{m.nombre}</h3>
-                      <p>
-                        {tipoLabels[m.tipo]}
-                        {bajo ? ' · Se está acabando' : ''}
-                      </p>
                     </div>
                     <span
                       className={styles.dot}
@@ -491,10 +528,11 @@ export function Materiales() {
                   </div>
                   <div className={styles.qty}>
                     <strong>
-                      {m.cantidad} {m.unidad}
+                      {m.cantidad}
+                      <span className={styles.unit}> {m.unidad}</span>
                     </strong>
                     {m.minimo != null ? (
-                      <span>mín. {m.minimo}</span>
+                      <span className={styles.min}>mín. {m.minimo}</span>
                     ) : null}
                   </div>
                   <div
@@ -512,39 +550,43 @@ export function Materiales() {
                   <div className={styles.actions}>
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      onClick={() =>
-                        void updateMaterial(m.id, {
-                          cantidad: m.cantidad + 10,
-                        })
-                      }
-                    >
-                      +10
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
+                      className={styles.qtyBtn}
                       onClick={() =>
                         void updateMaterial(m.id, {
                           cantidad: Math.max(0, m.cantidad - 10),
                         })
                       }
+                      aria-label="Restar 10"
                     >
                       −10
                     </button>
                     <button
                       type="button"
-                      className="btn btn-ghost"
+                      className={styles.qtyBtn}
+                      onClick={() =>
+                        void updateMaterial(m.id, {
+                          cantidad: m.cantidad + 10,
+                        })
+                      }
+                      aria-label="Sumar 10"
+                    >
+                      +10
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.textBtn}
                       onClick={() => startEdit(m.id)}
                     >
                       Editar
                     </button>
                     <button
                       type="button"
-                      className="btn btn-ghost"
+                      className={styles.iconDanger}
                       onClick={() => setBorrarId(m.id)}
+                      aria-label={`Borrar ${m.nombre}`}
+                      title="Borrar"
                     >
-                      Borrar
+                      <IconTrash width={16} height={16} />
                     </button>
                   </div>
                 </div>

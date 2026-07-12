@@ -62,6 +62,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
   const stickBottom = useRef(true)
   const abortRef = useRef<AbortController | null>(null)
   const userStopRef = useRef(false)
+  const inFlightRef = useRef(false)
 
   useEffect(() => {
     setMsgs(loadIaChat(scope))
@@ -78,9 +79,11 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
   }, [scope, msgs])
 
   useEffect(() => {
+    let cancelled = false
     void api
       .iaEstado()
       .then((s) => {
+        if (cancelled) return
         setOk(s.configurada)
         setProveedor(s.proveedor)
         if (s.configurada && usarPdf) {
@@ -93,7 +96,12 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
             .catch(() => {})
         }
       })
-      .catch(() => setOk(false))
+      .catch(() => {
+        if (!cancelled) setOk(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [proyectoId, patronId, archivoId, usarPdf])
 
   useEffect(() => {
@@ -106,6 +114,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
     return () => {
       // Al desmontar, cancelar sin dejar aviso de “detenido”
       userStopRef.current = false
+      inFlightRef.current = false
       abortRef.current?.abort()
       abortRef.current = null
     }
@@ -130,8 +139,9 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
 
   async function pedirAlBot(preguntaTexto: string, historial: IaChatMsg[]) {
     const q = preguntaTexto.trim()
-    if (!q || loading) return
+    if (!q || inFlightRef.current) return
 
+    inFlightRef.current = true
     userStopRef.current = false
     abortRef.current?.abort()
     const ac = new AbortController()
@@ -193,6 +203,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
       ])
     } finally {
       if (abortRef.current === ac) abortRef.current = null
+      inFlightRef.current = false
       setLoading(false)
       inputRef.current?.focus()
     }
@@ -202,12 +213,13 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
     userStopRef.current = true
     abortRef.current?.abort()
     abortRef.current = null
+    inFlightRef.current = false
     setLoading(false)
   }
 
   async function preguntar(texto?: string) {
     const q = (texto ?? pregunta).trim()
-    if (!q || loading) return
+    if (!q || inFlightRef.current) return
     setPregunta('')
     const historial = [...msgs, { id: uid(), rol: 'yo' as const, texto: q }]
     await pedirAlBot(q, historial)
@@ -228,7 +240,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
   }
 
   async function regenerar(botId: string) {
-    if (loading) return
+    if (inFlightRef.current) return
     const found = ultimaPreguntaAntesDe(botId)
     if (!found) return
     const historial = msgs.slice(0, found.yoIdx + 1)
@@ -236,13 +248,13 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
   }
 
   function empezarEditar(m: IaChatMsg) {
-    if (loading || m.rol !== 'yo') return
+    if (inFlightRef.current || m.rol !== 'yo') return
     setEditId(m.id)
     setEditDraft(m.texto)
   }
 
   async function confirmarEditar() {
-    if (!editId || loading) return
+    if (!editId || inFlightRef.current) return
     const texto = editDraft.trim()
     if (!texto) return
     const idx = msgs.findIndex((m) => m.id === editId)
@@ -256,7 +268,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
   }
 
   function limpiar() {
-    if (loading) return
+    if (inFlightRef.current) return
     clearIaChat(scope)
     setMsgs([holaMsg()])
     setEditId(null)
@@ -267,7 +279,7 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (loading) {
+    if (inFlightRef.current) {
       detener()
       return
     }

@@ -164,10 +164,27 @@ export async function deletePatron(id: string) {
   await pool.query(`DELETE FROM patrones WHERE id = ?`, [id])
 }
 
+function archivoSig(a: { nombre: string; tamano: number }) {
+  return `${a.nombre}\0${a.tamano}`
+}
+
+/** Une archivos del patrón + del proyecto sin repetir el mismo PDF/foto. */
+function mergeArchivosProyecto<T extends { id: string; nombre: string; tamano: number }>(
+  delPatron: T[],
+  propios: T[],
+): T[] {
+  const seenId = new Set(propios.map((a) => a.id))
+  const seenSig = new Set(propios.map(archivoSig))
+  const delPatronUnicos = delPatron.filter(
+    (a) => !seenId.has(a.id) && !seenSig.has(archivoSig(a)),
+  )
+  return [...delPatronUnicos, ...propios]
+}
+
 async function hydrateProyecto(raw: Proyecto): Promise<Proyecto> {
   const propios = await listArchivosByProyecto(raw.id)
   const delPatron = await listArchivosByPatron(raw.patronId)
-  const archivos = [...delPatron, ...propios]
+  const archivos = mergeArchivosProyecto(delPatron, propios)
   return {
     ...raw,
     archivos,

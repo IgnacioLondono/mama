@@ -354,8 +354,8 @@ export function ProyectoDetalle() {
           <div className={styles.sheetBody}>
             {panel === 'pasos' ? (
               <ol>
-                {parteActiva.instrucciones.map((ins) => (
-                  <li key={ins}>{ins}</li>
+                {parteActiva.instrucciones.map((ins, idx) => (
+                  <li key={`${parteActiva.id}-${idx}`}>{ins}</li>
                 ))}
               </ol>
             ) : null}
