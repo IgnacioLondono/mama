@@ -265,28 +265,6 @@
   padding: 0.65rem 0.85rem;
 }
 
-.typingRow {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-}
-
-.stopBtn {
-  border: 1px solid var(--color-line);
-  background: var(--color-surface-solid);
-  color: var(--color-danger);
-  border-radius: var(--radius-sm);
-  padding: 0.25rem 0.55rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.stopBtn:hover {
-  border-color: var(--color-danger);
-}
-
 .typing span {
   width: 0.38rem;
   height: 0.38rem;

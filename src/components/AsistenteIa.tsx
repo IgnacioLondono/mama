@@ -421,19 +421,10 @@ export function AsistenteIa({ proyectoId, patronId, archivoId }: Props) {
 
           {loading ? (
             <div className={styles.rowBot}>
-              <div className={styles.typingRow}>
-                <div className={`${styles.bubbleBot} ${styles.typing}`}>
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <button
-                  type="button"
-                  className={styles.stopBtn}
-                  onClick={detener}
-                >
-                  Detener
-                </button>
+              <div className={`${styles.bubbleBot} ${styles.typing}`}>
+                <span />
+                <span />
+                <span />
               </div>
             </div>
           ) : null}
