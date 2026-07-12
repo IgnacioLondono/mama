@@ -97,7 +97,7 @@ export function PdfVisor({ url, titulo }: Props) {
         if (cancelled) return
 
         const base = page.getViewport({ scale: 1 })
-        const scale = Math.min(2.4, Math.max(0.85, (ancho - 16) / base.width))
+        const scale = Math.min(2.6, Math.max(1, (ancho - 8) / base.width))
         const viewport = page.getViewport({ scale })
         const ctx = canvas.getContext('2d')
         if (!ctx) return
