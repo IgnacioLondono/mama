@@ -868,23 +868,25 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         hidden={!!error}
         onClick={onViewerClick}
       >
-        {loading ? (
-          <p className={styles.loading}>Preparando el patrón…</p>
-        ) : null}
-        <div
-          ref={stackRef}
-          className={styles.stack}
-          style={{ display: loading ? 'none' : 'inline-block' }}
-        >
-          <canvas ref={canvasRef} className={styles.canvas} />
-          <canvas
-            ref={markRef}
-            className={`${styles.markCanvas} ${pincel ? styles.markActive : ''}`}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-          />
+        <div className={styles.scrollInner}>
+          {loading ? (
+            <p className={styles.loading}>Preparando el patrón…</p>
+          ) : null}
+          <div
+            ref={stackRef}
+            className={styles.stack}
+            style={{ display: loading ? 'none' : 'inline-block' }}
+          >
+            <canvas ref={canvasRef} className={styles.canvas} />
+            <canvas
+              ref={markRef}
+              className={`${styles.markCanvas} ${pincel ? styles.markActive : ''}`}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+            />
+          </div>
         </div>
       </div>
     </div>

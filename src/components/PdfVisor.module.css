@@ -127,13 +127,20 @@
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 0.25rem;
   background: var(--color-viewer);
   /* Solo pan con un dedo; el pellizco lo manejamos nosotros (no zoom de página). */
   touch-action: pan-x pan-y;
+}
+
+/* Envuelve el PDF: centrado al ajustar, scroll completo al ampliar. */
+.scrollInner {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 100%;
+  padding: 0.25rem;
 }
 
 .scrollPaint {
@@ -236,6 +243,7 @@
 .stack {
   position: relative;
   max-width: none;
+  flex-shrink: 0;
   line-height: 0;
   box-shadow: var(--shadow-soft);
   border-radius: 2px;
