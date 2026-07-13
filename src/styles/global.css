@@ -34,6 +34,8 @@ body {
     );
   background-attachment: fixed;
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  /* Evita zoom por doble toque en tablets; el PDF tiene su propio zoom. */
+  touch-action: manipulation;
 }
 
 body::before {

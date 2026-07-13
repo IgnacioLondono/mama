@@ -30,6 +30,97 @@
   text-align: center;
 }
 
+.zoomBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.zoomBtn {
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-solid);
+  color: var(--color-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.zoomBtn:hover:not(:disabled) {
+  border-color: var(--color-coral);
+  color: var(--color-coral-deep);
+}
+
+.zoomBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.zoomPct {
+  min-width: 4.25rem;
+  min-height: 2.4rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-solid);
+  color: var(--color-ink);
+  font-weight: 800;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.zoomPct:hover:not(:disabled) {
+  border-color: var(--color-coral);
+  color: var(--color-coral-deep);
+}
+
+.zoomPct:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.zoomFit {
+  min-height: 2.4rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-surface-solid);
+  color: var(--color-ink-soft);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.zoomFit:hover:not(:disabled) {
+  border-color: var(--color-coral);
+  color: var(--color-coral-deep);
+}
+
+.zoomFit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.zoomHint {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--color-muted);
+}
+
 .scroll {
   flex: 1;
   min-height: 0;
@@ -41,7 +132,12 @@
   align-items: flex-start;
   padding: 0.25rem;
   background: var(--color-viewer);
-  touch-action: pan-x pan-y pinch-zoom;
+  /* Solo pan con un dedo; el pellizco lo manejamos nosotros (no zoom de página). */
+  touch-action: pan-x pan-y;
+}
+
+.scrollPaint {
+  touch-action: none;
 }
 
 .markBar {
@@ -139,7 +235,7 @@
 
 .stack {
   position: relative;
-  max-width: 100%;
+  max-width: none;
   line-height: 0;
   box-shadow: var(--shadow-soft);
   border-radius: 2px;
@@ -147,7 +243,7 @@
 }
 
 .canvas {
-  max-width: 100%;
+  max-width: none;
   height: auto;
   display: block;
   border-radius: 2px;
@@ -217,4 +313,21 @@
   font-size: 0.8rem !important;
   border-radius: var(--radius-sm) !important;
   box-shadow: none !important;
+}
+
+@media (max-width: 720px) {
+  .zoomHint {
+    display: none;
+  }
+
+  .zoomBtn,
+  .zoomPct,
+  .zoomFit {
+    min-height: 2.65rem;
+  }
+
+  .zoomBtn {
+    width: 2.65rem;
+    height: 2.65rem;
+  }
 }

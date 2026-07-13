@@ -234,3 +234,23 @@ export function IconHome(props: IconProps) {
     </svg>
   )
 }
+
+export function IconZoomIn(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="10.5" cy="10.5" r="5.5" />
+      <path d="M10.5 8v5M8 10.5h5" />
+      <path d="m15.5 15.5 4 4" />
+    </svg>
+  )
+}
+
+export function IconZoomOut(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="10.5" cy="10.5" r="5.5" />
+      <path d="M8 10.5h5" />
+      <path d="m15.5 15.5 4 4" />
+    </svg>
+  )
+}

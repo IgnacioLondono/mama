@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { loadMesaPdfPos, saveMesaPdfPos } from '../lib/mesaSession'
 import {
   COLORES_RESALTE,
@@ -8,7 +14,13 @@ import {
   type PdfMarkPoint,
   type PdfMarkStroke,
 } from '../lib/pdfMarks'
-import { IconBrush, IconEraser, IconTrash } from './Icons'
+import {
+  IconBrush,
+  IconEraser,
+  IconTrash,
+  IconZoomIn,
+  IconZoomOut,
+} from './Icons'
 import styles from './PdfVisor.module.css'
 
 interface Props {
@@ -16,6 +28,20 @@ interface Props {
   titulo: string
   proyectoId?: string
   archivoId?: string
+}
+
+const ZOOM_MIN = 0.5
+const ZOOM_MAX = 3
+const ZOOM_STEP = 0.25
+const ZOOM_FIT = 1
+
+function clampZoom(z: number) {
+  const stepped = Math.round(z / 0.05) * 0.05
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number(stepped.toFixed(2))))
+}
+
+function formatZoom(z: number) {
+  return `${Math.round(z * 100)}%`
 }
 
 function esCancelado(err: unknown): boolean {
@@ -81,9 +107,16 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   const drawingRef = useRef(false)
   const draftRef = useRef<PdfMarkPoint[]>([])
   const strokesRef = useRef<PdfMarkStroke[]>([])
-  const scrollPosRef = useRef({ top: 0, ratio: 0 })
+  const scrollPosRef = useRef({ top: 0, left: 0, ratio: 0 })
   const skipScrollSaveRef = useRef(false)
   const lastPaginaRef = useRef<number | null>(null)
+  const zoomRef = useRef(ZOOM_FIT)
+  const pinchRef = useRef<{ dist: number; zoom: number } | null>(null)
+  const lastTapRef = useRef(0)
+  const pincelRef = useRef(false)
+  const applyZoomRef = useRef<
+    (next: number, origin?: { x: number; y: number }) => void
+  >(() => {})
 
   const [paginas, setPaginas] = useState(0)
   const [pagina, setPagina] = useState(1)
@@ -91,6 +124,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   const [pintando, setPintando] = useState(false)
   const [error, setError] = useState('')
   const [ancho, setAncho] = useState(0)
+  const [zoom, setZoom] = useState(ZOOM_FIT)
   const [pincel, setPincel] = useState(false)
   const [borrador, setBorrador] = useState(false)
   const [colorIdx, setColorIdx] = useState(0)
@@ -99,6 +133,97 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
 
   const puedeMarcar = Boolean(proyectoId && archivoId)
   const grosorActual = GROSORES_PINCEL[grosorIdx].grosor
+
+  useEffect(() => {
+    zoomRef.current = zoom
+  }, [zoom])
+
+  useEffect(() => {
+    pincelRef.current = pincel
+  }, [pincel])
+
+  // Bloquear zoom de página del navegador (Safari/iPad) y manejar pellizco solo en el PDF.
+  useEffect(() => {
+    const wrap = wrapRef.current
+    if (!wrap) return
+
+    function distOf(touches: TouchList) {
+      if (touches.length < 2) return 0
+      const a = touches[0]
+      const b = touches[1]
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+    }
+
+    function centerOf(touches: TouchList) {
+      const a = touches[0]
+      const b = touches[1]
+      return {
+        x: (a.clientX + b.clientX) / 2,
+        y: (a.clientY + b.clientY) / 2,
+      }
+    }
+
+    function onPinchStart(e: TouchEvent) {
+      if (pincelRef.current || e.touches.length !== 2) {
+        pinchRef.current = null
+        return
+      }
+      e.preventDefault()
+      pinchRef.current = {
+        dist: distOf(e.touches),
+        zoom: zoomRef.current,
+      }
+    }
+
+    function onPinchMove(e: TouchEvent) {
+      if (e.touches.length >= 2) e.preventDefault()
+      if (!pinchRef.current || e.touches.length !== 2) return
+      const dist = distOf(e.touches)
+      if (dist < 8 || pinchRef.current.dist < 8) return
+      const factor = dist / pinchRef.current.dist
+      applyZoomRef.current(pinchRef.current.zoom * factor, centerOf(e.touches))
+    }
+
+    function onPinchEnd(e: TouchEvent) {
+      if (e.touches.length < 2) pinchRef.current = null
+    }
+
+    function blockPageZoom(e: TouchEvent) {
+      if (e.touches.length >= 2) e.preventDefault()
+    }
+
+    function blockGesture(e: Event) {
+      e.preventDefault()
+    }
+
+    const opts: AddEventListenerOptions = { passive: false, capture: true }
+
+    wrap.addEventListener('touchstart', onPinchStart, opts)
+    wrap.addEventListener('touchmove', onPinchMove, opts)
+    wrap.addEventListener('touchend', onPinchEnd, opts)
+    wrap.addEventListener('touchcancel', onPinchEnd, opts)
+    wrap.addEventListener('gesturestart', blockGesture, opts)
+    wrap.addEventListener('gesturechange', blockGesture, opts)
+    wrap.addEventListener('gestureend', blockGesture, opts)
+
+    // Mientras el PDF está abierto, ningún pellizco debe zoomar la página entera.
+    document.addEventListener('touchmove', blockPageZoom, opts)
+    document.addEventListener('gesturestart', blockGesture, opts)
+    document.addEventListener('gesturechange', blockGesture, opts)
+
+    return () => {
+      wrap.removeEventListener('touchstart', onPinchStart, opts)
+      wrap.removeEventListener('touchmove', onPinchMove, opts)
+      wrap.removeEventListener('touchend', onPinchEnd, opts)
+      wrap.removeEventListener('touchcancel', onPinchEnd, opts)
+      wrap.removeEventListener('gesturestart', blockGesture, opts)
+      wrap.removeEventListener('gesturechange', blockGesture, opts)
+      wrap.removeEventListener('gestureend', blockGesture, opts)
+      document.removeEventListener('touchmove', blockPageZoom, opts)
+      document.removeEventListener('gesturestart', blockGesture, opts)
+      document.removeEventListener('gesturechange', blockGesture, opts)
+    }
+  }, [loading, error])
 
   const redibujarMarcas = useCallback((list: PdfMarkStroke[]) => {
     const mark = markRef.current
@@ -145,6 +270,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
       setError('')
       setPaginas(0)
       setPagina(1)
+      setZoom(ZOOM_FIT)
       try {
         const pdfjs = await import('pdfjs-dist')
         const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url')
@@ -169,6 +295,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         let start = 1
         let scrollTop = 0
         let scrollRatio = 0
+        let savedZoom = ZOOM_FIT
         if (proyectoId && archivoId) {
           const saved = loadMesaPdfPos(proyectoId, archivoId)
           if (saved?.pagina && saved.pagina >= 1) {
@@ -178,8 +305,12 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
             scrollTop = saved.scrollTop || 0
             scrollRatio = saved.scrollRatio || 0
           }
+          if (saved?.zoom && Number.isFinite(saved.zoom)) {
+            savedZoom = clampZoom(saved.zoom)
+          }
         }
-        scrollPosRef.current = { top: scrollTop, ratio: scrollRatio }
+        scrollPosRef.current = { top: scrollTop, left: 0, ratio: scrollRatio }
+        setZoom(savedZoom)
         setPagina(start)
       } catch (err) {
         if (!cancelled) {
@@ -245,9 +376,9 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
           throw new Error('Página sin tamaño.')
         }
 
-        const dpr = Math.min(window.devicePixelRatio || 1, 2)
+        const dpr = Math.min(window.devicePixelRatio || 1, 2.5)
         const fit = Math.max(0.35, (ancho - 8) / base.width)
-        const scale = Math.min(2.2, fit) * dpr
+        const scale = Math.min(fit * zoom * 1.15, fit * ZOOM_MAX) * dpr
         const viewport = page.getViewport({ scale })
         const ctx = canvas.getContext('2d', { alpha: false })
         if (!ctx) throw new Error('Sin canvas.')
@@ -275,15 +406,18 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
             lastPaginaRef.current !== null && lastPaginaRef.current !== pagina
           if (pageChanged) {
             wrap.scrollTop = 0
-            scrollPosRef.current = { top: 0, ratio: 0 }
+            wrap.scrollLeft = 0
+            scrollPosRef.current = { top: 0, left: 0, ratio: 0 }
           } else {
-            const max = Math.max(0, wrap.scrollHeight - wrap.clientHeight)
-            const { top, ratio } = scrollPosRef.current
-            if (ratio > 0 && max > 0) {
-              wrap.scrollTop = ratio * max
+            const maxY = Math.max(0, wrap.scrollHeight - wrap.clientHeight)
+            const maxX = Math.max(0, wrap.scrollWidth - wrap.clientWidth)
+            const { top, left, ratio } = scrollPosRef.current
+            if (ratio > 0 && maxY > 0) {
+              wrap.scrollTop = ratio * maxY
             } else {
-              wrap.scrollTop = Math.min(top, max)
+              wrap.scrollTop = Math.min(top, maxY)
             }
+            wrap.scrollLeft = Math.min(left, maxX)
           }
           lastPaginaRef.current = pagina
           requestAnimationFrame(() => {
@@ -309,7 +443,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
       }
       renderTaskRef.current = null
     }
-  }, [pagina, paginas, url, ancho, loading, error, redibujarMarcas])
+  }, [pagina, paginas, url, ancho, zoom, loading, error, redibujarMarcas])
 
   useEffect(() => {
     if (!proyectoId || !archivoId || paginas === 0 || loading) return
@@ -317,8 +451,9 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
       pagina,
       scrollTop: scrollPosRef.current.top,
       scrollRatio: scrollPosRef.current.ratio,
+      zoom,
     })
-  }, [pagina, paginas, proyectoId, archivoId, loading])
+  }, [pagina, paginas, proyectoId, archivoId, loading, zoom])
 
   useEffect(() => {
     const wrap = wrapRef.current
@@ -329,14 +464,16 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
       if (skipScrollSaveRef.current) return
       const max = Math.max(0, wrap!.scrollHeight - wrap!.clientHeight)
       const top = wrap!.scrollTop
+      const left = wrap!.scrollLeft
       const ratio = max > 0 ? top / max : 0
-      scrollPosRef.current = { top, ratio }
+      scrollPosRef.current = { top, left, ratio }
       window.clearTimeout(timer)
       timer = window.setTimeout(() => {
         saveMesaPdfPos(proyectoId!, archivoId!, {
           pagina,
           scrollTop: top,
           scrollRatio: ratio,
+          zoom: zoomRef.current,
         })
       }, 120)
     }
@@ -348,6 +485,71 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
     }
   }, [proyectoId, archivoId, pagina, loading])
 
+  function applyZoom(next: number, origin?: { x: number; y: number }) {
+    const wrap = wrapRef.current
+    const prev = zoomRef.current
+    const z = clampZoom(next)
+    if (Math.abs(z - prev) < 0.01) return
+
+    if (wrap) {
+      const rect = wrap.getBoundingClientRect()
+      const ox = origin?.x ?? rect.left + wrap.clientWidth / 2
+      const oy = origin?.y ?? rect.top + wrap.clientHeight / 2
+      const relX = (wrap.scrollLeft + (ox - rect.left)) / Math.max(0.01, prev)
+      const relY = (wrap.scrollTop + (oy - rect.top)) / Math.max(0.01, prev)
+      skipScrollSaveRef.current = true
+      setZoom(z)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const maxX = Math.max(0, wrap.scrollWidth - wrap.clientWidth)
+          const maxY = Math.max(0, wrap.scrollHeight - wrap.clientHeight)
+          wrap.scrollLeft = Math.min(
+            maxX,
+            Math.max(0, relX * z - (ox - rect.left)),
+          )
+          wrap.scrollTop = Math.min(
+            maxY,
+            Math.max(0, relY * z - (oy - rect.top)),
+          )
+          scrollPosRef.current = {
+            top: wrap.scrollTop,
+            left: wrap.scrollLeft,
+            ratio: maxY > 0 ? wrap.scrollTop / maxY : 0,
+          }
+          skipScrollSaveRef.current = false
+        })
+      })
+    } else {
+      setZoom(z)
+    }
+  }
+  applyZoomRef.current = applyZoom
+
+  function zoomIn() {
+    applyZoom(zoomRef.current + ZOOM_STEP)
+  }
+
+  function zoomOut() {
+    applyZoom(zoomRef.current - ZOOM_STEP)
+  }
+
+  function zoomFit() {
+    applyZoom(ZOOM_FIT)
+  }
+
+  function onViewerClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (pincel || loading) return
+    if ((e.target as HTMLElement).closest('button, a')) return
+    const now = Date.now()
+    if (now - lastTapRef.current < 280) {
+      lastTapRef.current = 0
+      const next = zoomRef.current > 1.2 ? ZOOM_FIT : 1.75
+      applyZoom(next, { x: e.clientX, y: e.clientY })
+    } else {
+      lastTapRef.current = now
+    }
+  }
+
   function persist(next: PdfMarkStroke[]) {
     setStrokes(next)
     if (proyectoId && archivoId) {
@@ -355,7 +557,9 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
     }
   }
 
-  function puntoDesdeEvento(e: PointerEvent<HTMLCanvasElement>): PdfMarkPoint | null {
+  function puntoDesdeEvento(
+    e: ReactPointerEvent<HTMLCanvasElement>,
+  ): PdfMarkPoint | null {
     const mark = markRef.current
     if (!mark) return null
     const rect = mark.getBoundingClientRect()
@@ -366,7 +570,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
     }
   }
 
-  function onPointerDown(e: PointerEvent<HTMLCanvasElement>) {
+  function onPointerDown(e: ReactPointerEvent<HTMLCanvasElement>) {
     if (!pincel || !puedeMarcar || loading) return
     e.preventDefault()
     const p = puntoDesdeEvento(e)
@@ -403,7 +607,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
     ])
   }
 
-  function onPointerMove(e: PointerEvent<HTMLCanvasElement>) {
+  function onPointerMove(e: ReactPointerEvent<HTMLCanvasElement>) {
     if (!drawingRef.current || borrador) return
     const p = puntoDesdeEvento(e)
     if (!p) return
@@ -423,7 +627,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
     ])
   }
 
-  function onPointerUp(e: PointerEvent<HTMLCanvasElement>) {
+  function onPointerUp(e: ReactPointerEvent<HTMLCanvasElement>) {
     if (!drawingRef.current) return
     drawingRef.current = false
     try {
@@ -452,7 +656,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
 
   function ir(delta: number) {
     setError('')
-    scrollPosRef.current = { top: 0, ratio: 0 }
+    scrollPosRef.current = { top: 0, left: 0, ratio: 0 }
     setPagina((p) => Math.min(paginas, Math.max(1, p + delta)))
   }
 
@@ -507,6 +711,48 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         >
           Siguiente
         </button>
+      </div>
+
+      <div className={styles.zoomBar} role="toolbar" aria-label="Zoom del PDF">
+        <button
+          type="button"
+          className={styles.zoomBtn}
+          disabled={loading || zoom <= ZOOM_MIN}
+          onClick={zoomOut}
+          title="Alejar"
+          aria-label="Alejar"
+        >
+          <IconZoomOut width={20} height={20} />
+        </button>
+        <button
+          type="button"
+          className={styles.zoomPct}
+          disabled={loading}
+          onClick={zoomFit}
+          title="Ajustar al ancho"
+          aria-label={`Zoom ${formatZoom(zoom)}. Tocar para ajustar al ancho`}
+        >
+          {formatZoom(zoom)}
+        </button>
+        <button
+          type="button"
+          className={styles.zoomBtn}
+          disabled={loading || zoom >= ZOOM_MAX}
+          onClick={zoomIn}
+          title="Acercar"
+          aria-label="Acercar"
+        >
+          <IconZoomIn width={20} height={20} />
+        </button>
+        <button
+          type="button"
+          className={styles.zoomFit}
+          disabled={loading || zoom === ZOOM_FIT}
+          onClick={zoomFit}
+        >
+          Ajustar
+        </button>
+        <span className={styles.zoomHint}>Pellizcá o doble toque</span>
       </div>
 
       {puedeMarcar ? (
@@ -616,7 +862,12 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         </div>
       ) : null}
 
-      <div ref={wrapRef} className={styles.scroll} hidden={!!error}>
+      <div
+        ref={wrapRef}
+        className={`${styles.scroll} ${pincel ? styles.scrollPaint : ''}`}
+        hidden={!!error}
+        onClick={onViewerClick}
+      >
         {loading ? (
           <p className={styles.loading}>Preparando el patrón…</p>
         ) : null}

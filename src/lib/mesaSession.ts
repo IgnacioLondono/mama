@@ -8,6 +8,8 @@ export interface MesaPdfPos {
   pagina?: number
   scrollRatio: number
   scrollTop: number
+  /** Zoom relativo al ancho del panel (1 = ajustar al ancho). */
+  zoom?: number
 }
 
 export interface MesaProgresoCache {
