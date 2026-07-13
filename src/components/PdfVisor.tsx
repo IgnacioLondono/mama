@@ -34,6 +34,8 @@ const ZOOM_MIN = 0.5
 const ZOOM_MAX = 3
 const ZOOM_STEP = 0.25
 const ZOOM_FIT = 1
+/** Espera antes de re-renderizar el PDF nítido (evita parpadeo al pellizcar). */
+const ZOOM_RENDER_MS = 160
 
 function clampZoom(z: number) {
   const stepped = Math.round(z / 0.05) * 0.05
@@ -117,6 +119,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   const applyZoomRef = useRef<
     (next: number, origin?: { x: number; y: number }) => void
   >(() => {})
+  const pageCssRef = useRef({ w: 0, h: 0 })
 
   const [paginas, setPaginas] = useState(0)
   const [pagina, setPagina] = useState(1)
@@ -125,6 +128,9 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   const [error, setError] = useState('')
   const [ancho, setAncho] = useState(0)
   const [zoom, setZoom] = useState(ZOOM_FIT)
+  /** Zoom con el que está dibujado el canvas (se actualiza con debounce). */
+  const [renderZoom, setRenderZoom] = useState(ZOOM_FIT)
+  const [pageCss, setPageCss] = useState({ w: 0, h: 0 })
   const [pincel, setPincel] = useState(false)
   const [borrador, setBorrador] = useState(false)
   const [colorIdx, setColorIdx] = useState(0)
@@ -137,6 +143,19 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
   useEffect(() => {
     zoomRef.current = zoom
   }, [zoom])
+
+  useEffect(() => {
+    pageCssRef.current = pageCss
+  }, [pageCss])
+
+  // Zoom visual inmediato; re-render nítido solo cuando el gesto se estabiliza.
+  useEffect(() => {
+    if (Math.abs(zoom - renderZoom) < 0.001) return
+    const t = window.setTimeout(() => {
+      setRenderZoom(zoom)
+    }, ZOOM_RENDER_MS)
+    return () => window.clearTimeout(t)
+  }, [zoom, renderZoom])
 
   useEffect(() => {
     pincelRef.current = pincel
@@ -271,6 +290,8 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
       setPaginas(0)
       setPagina(1)
       setZoom(ZOOM_FIT)
+      setRenderZoom(ZOOM_FIT)
+      setPageCss({ w: 0, h: 0 })
       try {
         const pdfjs = await import('pdfjs-dist')
         const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url')
@@ -311,6 +332,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
         }
         scrollPosRef.current = { top: scrollTop, left: 0, ratio: scrollRatio }
         setZoom(savedZoom)
+        setRenderZoom(savedZoom)
         setPagina(start)
       } catch (err) {
         if (!cancelled) {
@@ -356,11 +378,21 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
     async function render() {
       const doc = docRef.current
       const canvas = canvasRef.current
-      if (loading || error || !doc || !canvas || paginas === 0 || ancho <= 0) {
+      if (
+        loading ||
+        error ||
+        !doc ||
+        !canvas ||
+        paginas === 0 ||
+        ancho <= 0
+      ) {
         return
       }
 
-      setPintando(true)
+      const pageChanging =
+        lastPaginaRef.current !== null && lastPaginaRef.current !== pagina
+      if (pageChanging || !pageCssRef.current.w) setPintando(true)
+
       try {
         try {
           renderTaskRef.current?.cancel?.()
@@ -378,33 +410,43 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
 
         const dpr = Math.min(window.devicePixelRatio || 1, 2.5)
         const fit = Math.max(0.35, (ancho - 8) / base.width)
-        const scale = Math.min(fit * zoom * 1.15, fit * ZOOM_MAX) * dpr
+        const scale = Math.min(fit * renderZoom * 1.15, fit * ZOOM_MAX) * dpr
         const viewport = page.getViewport({ scale })
-        const ctx = canvas.getContext('2d', { alpha: false })
-        if (!ctx) throw new Error('Sin canvas.')
+        const cssW = Math.floor(viewport.width / dpr)
+        const cssH = Math.floor(viewport.height / dpr)
 
-        canvas.width = Math.floor(viewport.width)
-        canvas.height = Math.floor(viewport.height)
-        canvas.style.width = `${Math.floor(viewport.width / dpr)}px`
-        canvas.style.height = `${Math.floor(viewport.height / dpr)}px`
+        // Render offscreen para no blanquear el canvas visible (evita parpadeo).
+        const off = document.createElement('canvas')
+        off.width = Math.floor(viewport.width)
+        off.height = Math.floor(viewport.height)
+        const offCtx = off.getContext('2d', { alpha: false })
+        if (!offCtx) throw new Error('Sin canvas.')
 
         const task = page.render({
-          canvasContext: ctx,
+          canvasContext: offCtx,
           viewport,
-          canvas,
+          canvas: off,
           background: '#ffffff',
         })
         renderTaskRef.current = task
         await task.promise
         if (cancelled) return
+
+        canvas.width = off.width
+        canvas.height = off.height
+        canvas.style.width = `${cssW}px`
+        canvas.style.height = `${cssH}px`
+        const ctx = canvas.getContext('2d', { alpha: false })
+        if (!ctx) throw new Error('Sin canvas.')
+        ctx.drawImage(off, 0, 0)
+
+        setPageCss({ w: cssW, h: cssH })
         redibujarMarcas(strokesRef.current)
 
         const wrap = wrapRef.current
         if (wrap) {
           skipScrollSaveRef.current = true
-          const pageChanged =
-            lastPaginaRef.current !== null && lastPaginaRef.current !== pagina
-          if (pageChanged) {
+          if (pageChanging) {
             wrap.scrollTop = 0
             wrap.scrollLeft = 0
             scrollPosRef.current = { top: 0, left: 0, ratio: 0 }
@@ -443,7 +485,7 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
       }
       renderTaskRef.current = null
     }
-  }, [pagina, paginas, url, ancho, zoom, loading, error, redibujarMarcas])
+  }, [pagina, paginas, url, ancho, renderZoom, loading, error, redibujarMarcas])
 
   useEffect(() => {
     if (!proyectoId || !archivoId || paginas === 0 || loading) return
@@ -873,19 +915,41 @@ export function PdfVisor({ url, titulo, proyectoId, archivoId }: Props) {
             <p className={styles.loading}>Preparando el patrón…</p>
           ) : null}
           <div
-            ref={stackRef}
-            className={styles.stack}
-            style={{ display: loading ? 'none' : 'inline-block' }}
+            className={styles.stackLayout}
+            style={
+              !loading && pageCss.w > 0
+                ? {
+                    width: pageCss.w * (zoom / Math.max(0.01, renderZoom)),
+                    height: pageCss.h * (zoom / Math.max(0.01, renderZoom)),
+                  }
+                : loading
+                  ? { display: 'none' }
+                  : undefined
+            }
           >
-            <canvas ref={canvasRef} className={styles.canvas} />
-            <canvas
-              ref={markRef}
-              className={`${styles.markCanvas} ${pincel ? styles.markActive : ''}`}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerUp}
-            />
+            <div
+              ref={stackRef}
+              className={styles.stack}
+              style={
+                pageCss.w > 0
+                  ? {
+                      width: pageCss.w,
+                      height: pageCss.h,
+                      transform: `scale(${zoom / Math.max(0.01, renderZoom)})`,
+                    }
+                  : undefined
+              }
+            >
+              <canvas ref={canvasRef} className={styles.canvas} />
+              <canvas
+                ref={markRef}
+                className={`${styles.markCanvas} ${pincel ? styles.markActive : ''}`}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+              />
+            </div>
           </div>
         </div>
       </div>
